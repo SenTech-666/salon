@@ -30,7 +30,6 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
   font-size: 3.2rem;
   margin-bottom: 30px;
   font-weight: 600;
-  
 }
 
 .month-nav {
@@ -814,4 +813,102 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
     padding: 10px;
     font-size: 1rem;
   }
+}
+/* === АДАПТИВ ДЛЯ СЕТКИ ВРЕМЕНИ — НАСЫПАЛ ПО ПОЛНОЙ, ЧТОБЫ БОЛЬШЕ НЕ ЕБАЛА МОЗГИ === */
+@media (max-width: 640px) {
+  .time-slots-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 14px !important;
+    max-width: 380px !important;
+    margin: 32px auto 20px !important;
+    padding: 0 16px !important;
+  }
+  .time-slot {
+    padding: 15px 8px !important;
+    font-size: 1.05rem !important;
+    border-radius: 26px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .time-slots-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px !important;
+    max-width: 340px !important;
+    padding: 0 12px !important;
+  }
+  .time-slot {
+    padding: 14px 6px !important;
+    font-size: 1rem !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .time-slots-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    max-width: 280px !important;
+    padding: 0 10px !important;
+  }
+  .time-slot {
+    padding: 13px 6px !important;
+    font-size: 0.95rem !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .time-slots-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    max-width: 240px !important;
+  }
+  .time-slot {
+    padding: 12px 4px !important;
+    font-size: 0.9rem !important;
+  }
+}
+
+/* Если совсем узкий экран (старые андроиды) — делаем 2 колонки и похуй */
+@media (max-width: 320px) {
+  .time-slots-grid {
+    gap: 8px !important;
+    max-width: 220px !important;
+  }
+  .time-slot {
+    padding: 11px 4px !important;
+    font-size: 0.85rem !important;
+  }
+}
+
+/* Дополнительно — чтоб на широких экранах не растягивалась на всю ширину модалки */
+.time-slots-grid {
+  max-width: 460px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+/* === ЗАГОЛОВОК НА СТРАНИЦЕ КАЛЕНДАРЯ — СДЕЛАЛ ЕГО БОГОМ === */
+#calendar-container .header h1,
+.header h1 {
+  font-family: 'Playfair Display', serif !important;
+  font-size: 3.8rem !important;
+  font-weight: 800 !important;
+  color: #222 !important;
+  text-align: center !important;
+  margin: 0 0 24px 0 !important;
+  letter-spacing: -1px !important;
+  text-shadow: 0 3px 12px rgba(201,160,138,0.15) !important;
+  background: #222 !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* Если хочешь просто жирный чёрный без градиента — раскомментируй это и закомментируй блок выше */
+
+#calendar-container .header h1,
+.header h1 {
+  font-size: 3.6rem !important;
+  font-weight: 900 !important;
+  color: #222 !important;
+  letter-spacing: -1.5px !important;
 }
