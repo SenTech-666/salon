@@ -1,0 +1,274 @@
+/* admin.css — без дублей и мусора */
+:root {
+  --bg: #faf8f5;
+  --card: #ffffff;
+  --text: #3c2f2f;
+  --text-light: #6b5b5b;
+  --accent: #c9a08a;
+  --accent-hover: #b38a72;
+  --border: #e8e2db;
+  --radius: 28px;
+  --shadow: 0 10px 40px rgba(0,0,0,0.08);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Inter', sans-serif; background:var(--bg); color:var(--text); padding:32px 16px; }
+
+.admin-wrapper { max-width: 1200px; margin:0 auto; }
+.admin-header { text-align:center; margin-bottom:60px; }
+.admin-header h1 { font-family:'Playfair Display',serif; font-size:3.8rem; }
+.admin-header p { color:var(--text-light); font-size:1.3rem; margin-top:12px; }
+
+.admin-grid { 
+  display:grid; 
+  grid-template-columns: repeat(auto-fit, minmax(380px,1fr)); 
+  gap:32px; 
+}
+
+.card {
+  background:var(--card);
+  border-radius:var(--radius);
+  padding:32px;
+  box-shadow:var(--shadow);
+  border:1px solid var(--border);
+}
+
+.card h2 {
+  font-family:'Playfair Display',serif;
+  font-size:2rem;
+  margin-bottom:24px;
+  color:var(--accent);
+}
+
+.badge {
+  background:var(--accent);
+  color:white;
+  font-size:0.9rem;
+  padding:4px 12px;
+  border-radius:20px;
+  margin-left:10px;
+}
+
+.time-slots-grid {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-top:20px;
+}
+
+.time-slot {
+  padding:14px 8px;
+  background:var(--card);
+  border:2px solid var(--border);
+  border-radius:20px;
+  text-align:center;
+  font-weight:600;
+  cursor:pointer;
+  transition:all 0.3s;
+}
+
+.time-slot.blocked {
+  background:#ffe5e5;
+  border-color:#ff6b6b;
+  color:#d33;
+}
+
+.time-slot:hover:not(.blocked) {
+  background:var(--accent);
+  color:white;
+  transform:scale(1.06);
+}
+
+.services-list, .bookings-list { margin-top:20px; }
+.service-item, .booking-item {
+  padding:18px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  margin-bottom:14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.filters { margin:20px 0; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.filters input, .filters select {
+  padding:14px 18px;
+  border:2px solid var(--border);
+  border-radius:20px;
+  background:white;
+  font-size:1rem;
+  min-width:180px;
+}
+.filters button {
+  background:#a0938a;
+  color:white;
+  border:none;
+  padding:14px 24px;
+  border-radius:50px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.booking-item button {
+  background:none;
+  border:none;
+  font-size:1.6rem;
+  cursor:pointer;
+  padding:8px;
+  border-radius:12px;
+}
+.booking-item button:first-child { color:var(--accent); }
+.booking-item .delete-btn { color:#ff5252; }
+
+.modal {
+  display:none;
+  position:fixed;
+  top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.5);
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+}
+.modal-content {
+  background:white;
+  padding:40px;
+  border-radius:28px;
+  width:90%;
+  max-width:420px;
+  position:relative;
+}
+.modal-content input {
+  width:100%;
+  padding:14px;
+  margin:12px 0;
+  border:2px solid var(--border);
+  border-radius:20px;
+}
+.btn-main {
+  background:var(--accent);
+  color:white;
+  border:none;
+  padding:14px 32px;
+  border-radius:50px;
+  font-weight:600;
+  cursor:pointer;
+  width:100%;
+  margin-top:20px;
+}
+.close { position:absolute; top:16px; right:20px; font-size:2rem; cursor:pointer; }
+
+/* ============================== АДМИНСКИЕ БЛОКИРОВКИ — КРАСИВО И ЯСНО ============================== */
+
+/* Заблокированный слот (отдельный) */
+.time-slot.blocked {
+  background: #ffebee !important;
+  border: 2px solid #ef5350 !important;
+  color: #c62828 !important;
+  position: relative;
+  cursor: not-allowed;
+  opacity: 0.9;
+}
+
+.time-slot.blocked::after {
+  content: "ЗАКРЫТО";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-20deg);
+  font-weight: 900;
+  font-size: 0.7rem;
+  color: #c62828;
+  letter-spacing: 1px;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* Полностью заблокированный день (если админ нажал "Заблокировать весь день") */
+.time-slots-grid.blocked-full {
+  pointer-events: none;
+  opacity: 0.6;
+  position: relative;
+}
+
+.time-slots-grid.blocked-full::before {
+  content: "ДЕНЬ ЗАКРЫТ";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #ef5350;
+  color: white;
+  padding: 16px 32px;
+  border-radius: 50px;
+  font-weight: 900;
+  font-size: 1.4rem;
+  z-index: 10;
+  box-shadow: 0 10px 30px rgba(239, 83, 80, 0.4);
+  letter-spacing: 2px;
+}
+
+/* Свободный слот — чуть ярче при наведении */
+.time-slot:not(.blocked):hover {
+  background: var(--accent) !important;
+  color: white !important;
+  transform: scale(1.08);
+  box-shadow: 0 8px 20px rgba(201, 160, 138, 0.3);
+}
+
+/* Кнопки блокировки дня — красиво и понятно */
+.btn-block-day {
+  background: #ef5350;
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 50px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(239, 83, 80, 0.3);
+  transition: all 0.3s;
+}
+
+.btn-block-day.unblock {
+  background: #43a047;
+  box-shadow: 0 8px 25px rgba(67, 160, 71, 0.3);
+}
+
+.btn-block-day:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 35px rgba(239, 83, 80, 0.45);
+}
+
+.btn-block-day.unblock:hover {
+  box-shadow: 0 14px 35px rgba(67, 160, 71, 0.45);
+}
+
+/* Подсветка выбранной даты в календаре (flatpickr) */
+#admin-calendar .flatpickr-day.selected,
+#admin-calendar .flatpickr-day.today {
+  background: var(--accent) !important;
+  color: white !important;
+  border: none !important;
+}
+
+#admin-calendar .flatpickr-day:hover {
+  background: rgba(201, 160, 138, 0.15) !important;
+}
+
+/* Если день полностью заблокирован — показываем в календаре тоже */
+#admin-calendar .flatpickr-day.blocked-full {
+  background: #ffebee !important;
+  color: #c62828 !important;
+  position: relative;
+}
+
+#admin-calendar .flatpickr-day.blocked-full::after {
+  content: "ЗАКРЫТ";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #c62828;
+}

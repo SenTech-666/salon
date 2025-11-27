@@ -1,0 +1,733 @@
+/* styles.css — ФИНАЛЬНАЯ ВЕРСИЯ БЕЗ ДУБЛЕЙ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap');
+
+:root {
+  --bg: #c4bfb8;
+  --card: #FFFFFF;
+  --modal: #dbd6ce;
+  --accent: #C9A08A;
+  --text: #222222;
+  --text-light: #666666;
+  --border: rgba(201, 160, 138, 0.22);
+  --shadow: 0 10px 30px rgba(180, 140, 115, 0.18);
+  --shadow-hover: 0 24px 60px rgba(180, 140, 115, 0.38);
+  --radius: 24px;
+  --cell: 150px;
+  --gap: 14px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); }
+
+#calendar-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 50px 20px;
+}
+
+.header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 3.2rem;
+  margin-bottom: 30px;
+  font-weight: 600;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  text-align: center;
+  z-index: 10;
+}
+
+.month-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 50px;
+  margin: 50px 0 40px;
+  margin: 140px 0 40px;
+}
+.month-nav button {
+  background:none; border:none; font-size:3.4rem; color:var(--accent); cursor:pointer;
+}
+.month-nav button:hover { transform:scale(1.35); }
+#currentMonth { font-size:2.1rem; font-weight:600; }
+
+/* Дни недели — теперь только через JS */
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, var(--cell));
+  gap: var(--gap);
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.weekdays div {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+#calendar {
+  display: grid;
+  grid-template-columns: repeat(7, var(--cell));
+  gap: var(--gap);
+  justify-content: center;
+}
+
+.day {
+  width: var(--cell);
+  height: var(--cell);
+  background: var(--card);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.day:hover:not(.booked):not(.past) {
+  transform: translateY(-12px) scale(1.12);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--accent);
+  z-index: 10;
+}
+
+.day-number {
+  font-weight: 700;
+  font-size: 1.65rem;
+  color: Гар(--text);
+}
+
+.status {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 4px;
+}
+
+.today::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 3px solid var(--accent);
+  border-radius: var(--radius);
+  pointer-events: none;
+}
+
+.day.booked, .day.past {
+  opacity: 0.35;
+  pointer-events: none;
+  background: #fcfcfc;
+}
+
+@media (max-width: 520px) {
+  :root { --cell: 58px; --gap: 10px; }
+  #calendar-container { max-width: 100%; padding: 30px 10px; }
+}
+
+.day {
+  pointer-events: auto !important;
+}
+.day.booked,
+.day.past {
+  pointer-events: none !important;
+}
+
+/* МОДАЛКА — ЛЮКС 2025 (работает с #modal-root) */
+#modal-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: all;
+}
+
+.modal {
+  background: var(--modal);
+  padding: 44px 36px;
+  border-radius: var(--radius);
+  max-width: 500px;
+  width: 92%;
+  box-shadow: var(--shadow-hover);
+  border: 1px solid var(--border);
+  position: relative;
+  transform: translateY(40px);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-align: center;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  background: var(--accent);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.modal-close:hover {
+  background: var(--accent-hover);
+  transform: scale(1.15);
+}
+
+/* Остальные стили (время, кнопки, инпуты) — оставь из прошлого сообщения */
+
+/* Инпуты и селект */
+.modal input, .modal select {
+  width: 100%;
+  padding: 16px 20px;
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  font-size: 1rem;
+  background: white;
+  transition: all 0.3s;
+}
+.modal input:focus, .modal select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(201, 160, 138, 0.2);
+}
+
+/* Кнопка записи */
+.modal button.main {
+  background: var(--accent);
+  color: white;
+  padding: 18px 60px;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: all 0.3s;
+}
+.modal button.main:hover {
+  background: var(--accent-hover);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(201, 160, 138, 0.4);
+}
+
+/* Анимации */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.8) translateY(50px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* КЛАССИЧЕСКАЯ СЕТКА ВРЕМЕНИ — КАК БЫЛО, НО В НАШЕМ ЛЮКСЕ */
+.time-grid-old {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+  padding: 16px;
+  background: rgba(245, 240, 235, 0.6);
+  border-radius: 24px;
+  backdrop-filter: blur(4px);
+}
+
+.time-slot-old {
+  padding: 16px 8px;
+  background: var(--card);
+  color: var(--text);
+  border-radius: 20px;
+  text-align: center;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.time-slot-old:hover:not(.blocked) {
+  background: var(--accent);
+  color: white;
+  transform: translateY(-6px) scale(1.05);
+  box-shadow: var(--shadow-hover);
+}
+
+.time-slot-old.blocked {
+  background: #f0f0f0;
+  color: #aaa;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none !important;
+}
+
+.time-slot-old.selected {
+  background: var(--accent) !important;
+  color: white !important;
+  transform: scale(1.08) !important;
+  box-shadow: 0 12px 30px rgba(201, 160, 138, 0.4) !important;
+}
+/* ГЛАВНАЯ — ЛЮКС 2025 */
+.hero {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 70%, rgba(201, 160, 138, 0.08), transparent 50%);
+  pointer-events: none;
+}
+
+.hero-content {
+  max-width: 680px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(3rem, 8vw, 5rem);
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 16px;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.hero-subtitle {
+  font-size: 1.4rem;
+  color: var(--text-light);
+  margin: 0 0 48px;
+  font-weight: 500;
+}
+
+.calendar-wrapper {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 40px 32px;
+  box-shadow: var(--shadow-hover);
+  border: 1px solid var(--border);
+  margin: 40px 0;
+  backdrop-filter: blur(10px);
+}
+
+.header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 3.2rem;
+  font-weight: 600;
+
+  /* Теперь "Запись" по центру и с нормальным отступом сверху */
+  position: absolute;
+  top: 70px;              /* ← вот он, твой красивый отступ от верха */
+  left: 50%;
+  bottom: 50px;
+  transform: translateX(-50%);
+  width: 100%;
+  text-align: center;
+  z-index: 10;
+  margin: 0;              /* на всякий пожарный убираем старый margin */
+}
+
+
+.month-nav {
+  margin: 32px 0;
+}
+
+.hero-footer {
+  font-size: 1.1rem;
+  color: var(--text-light);
+  line-height: 1.6;
+  margin-top: 40px;
+}
+
+/* Адаптив */
+@media (max-width: 640px) {
+  .hero { padding: 20px 16px; }
+  .calendar-wrapper { padding: 24px 16px; }
+  .hero-title { font-size: 2.8rem; }
+}
+/* INDEX.HTML — ПОЛНЫЙ ЛЮКС 2025 */
+
+/* HERO с параллаксом и затемнением */
+.hero-parallax {
+  position: relative;
+  height: 100vh;
+  background: url('assets/pexels-brigitte-tohm-36757-239576.jpg') center/cover no-repeat fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: white;
+  overflow: hidden;
+}
+
+.hero-overlay {
+  background-image: url("/assets/pexels-brigitte-tohm-36757-239576.jpg");
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.6));
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  animation: fadeIn 1.8s ease-out;
+}
+
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(4rem, 10vw, 7rem);
+  margin: 0 0 16px;
+  color: #d4b19b;
+  text-shadow: 0 4px 30px rgba(0,0,0,0.5);
+  font-weight: 700;
+}
+
+.hero-subtitle {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  margin: 24px 0 40px;
+  opacity: 0.95;
+  font-weight: 500;
+}
+
+.btn-hero {
+  background: var(--accent);
+  color: white;
+  padding: 22px 64px;
+  border-radius: 60px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 15px 40px rgba(201,160,138,0.4);
+  transition: all 0.4s ease;
+  display: inline-block;
+}
+
+.btn-hero:hover {
+  background: var(--accent-hover);
+  transform: translateY(-8px);
+  box-shadow: 0 25px 60px rgba(201,160,138,0.5);
+}
+
+/* Секции */
+.features-section, .map-section, .cta-section {
+  padding: 100px 20px;
+  background: var(--bg);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem;
+  margin-bottom: 60px;
+  color: var(--text);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+}
+
+.feature-card {
+  background: var(--card);
+  padding: 40px 24px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: transform 0.4s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-12px);
+}
+
+.feature-icon {
+  font-size: 3.5rem;
+  margin-bottom: 20px;
+}
+
+.feature-card h3 {
+  font-size: 1.5rem;
+  margin: 16px 0;
+  color: var(--text);
+}
+
+.feature-card p {
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+/* Карта */
+#dgis-map {
+  width: 100%;
+  height: 520px;
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow: var(--shadow-hover);
+}
+
+/* Финальная кнопка */
+.cta-section {
+  padding: 120px 20px;
+  background: white;
+}
+
+.btn-cta {
+  background: linear-gradient(135deg, #d4b19b, #c9a08a);
+  color: white;
+  padding: 24px 72px;
+  border-radius: 60px;
+  font-size: 1.7rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 25px 70px rgba(201,160,138,0.45);
+  transition: all 0.4s;
+  display: inline-block;
+}
+
+.btn-cta:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 35px 90px rgba(201,160,138,0.6);
+}
+
+/* PWA кнопка */
+.install-btn {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--accent);
+  color: white;
+  padding: 16px 28px;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  box-shadow: 0 12px 40px rgba(201,160,138,0.5);
+  z-index: 999;
+  cursor: pointer;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.day.blocked-full { background:#ffe5e5; opacity:0.7; }
+.day.partial { background:#fff8e1; }
+.status.blocked { background:#ff6b6b; color:white; }
+.status.partial { background:#ffca28; color:#3c2f2f; }
+.status.your-booking { background:#c9a08a; color:white; }
+.time-slot.blocked { background:#ff5252 !important; color:white; cursor:not-allowed; }
+.time-slot.booked { background:#999 !important; color:white; cursor:not-allowed; }
+.time-slot.free { background:var(--accent); color:white; cursor:pointer; }
+.time-slot.free:hover { background:var(--accent-hover); transform:scale(1.05); }
+
+/* КЛИЕНТСКАЯ МОДАЛКА — СЛОТЫ */
+.time-slot-old {
+  padding: 14px 10px;
+  text-align: center;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #f8f9fa;
+  border: 2px solid transparent;
+  font-weight: 600;
+}
+
+.time-slot-old.free {
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  color: #333;
+}
+
+.time-slot-old.free:hover {
+  background: var(--accent, #ff6b9d);
+  color: white;
+  transform: scale(1.05);
+  border-color: var(--accent, #ff6b9d);
+}
+
+.time-slot-old.blocked {
+  background: #ffebee !important;
+  border: 2px dashed #ef5350 !important;
+  color: #c62828 !important;
+  cursor: not-allowed !important;
+  pointer-events: auto !important; /* ВАЖНО! оставляем кликабельность, чтобы можно было показать тост */
+  position: relative;
+}
+
+.time-slot-old.blocked::after {
+  content: "ЗАКРЫТО";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.65rem;
+  font-weight: 900;
+  background: #c62828;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.time-slot-old.selected {
+  background: var(--accent, #ff6b9d) !important;
+  color: white !important;
+  border-color: var(--accent, #ff6b9d) !important;
+  transform: scale(1.08);
+}
+
+/* === КРАСИВЫЕ КРУГЛЫЕ СЛОТЫ ВРЕМЕНИ === */
+.time-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin: 28px 0;
+  padding: 0 10px;
+}
+
+.time-slot {
+  padding: 16px 8px;
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: 24px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(201, 160, 138, 0.08);
+}
+
+.time-slot:hover:not(.blocked) {
+  background: var(--accent);
+  color: white;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(201, 160, 138, 0.3);
+}
+
+.time-slot.blocked {
+  background: #ffe5e5;
+  border-color: #ff6b6b;
+  color: #d33;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.time-slot.selected {
+  background: var(--accent) !important;
+  color: white !important;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(201, 160, 138, 0.4);
+}
+
+/* Форма и успех */
+.booking-form-hidden { display: none; margin-top: 32px; }
+.success-hidden { display: none; text-align: center; margin-top: 20px; }
+.success-icon { font-size: 4.5rem; margin: 20px 0; }
+.success-text { font-size: 1.5rem; color: var(--accent); line-height: 1.4; }
+
+.booking-modal input,
+.booking-modal select {
+  width: 100%;
+  padding: 16px;
+  margin: 12px 0;
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  font-size: 1.1rem;
+  background: white;
+}
+
+.booking-modal h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  color: var(--accent);
+  text-align: center;
+}
+
+/* === КРАСИВЫЕ ПИЗДАТЫЕ ТОАСТЫ === */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.88);
+  color: white;
+  padding: 16px 32px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  z-index: 9999;
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+  min-width: 280px;
+  text-align: center;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-12px);
+}
+
+.toast.success { background: #4caf50; }
+.toast.error   { background: #ff5252; }
+.toast.info    { background: #2196f3; }
+.toast.warning { background: #ff9800; }
+
+/* Иконки в тостах (чисто по красоте) */
+.toast::before {
+  content: "✅";
+  margin-right: 10px;
+  font-size: 1.3em;
+  vertical-align: middle;
+}
+.toast.error::before   { content: "❌"; }
+.toast.warning::before { content: "⚠️"; }
+.toast.info::before    { content: "ℹ️"; }

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Василики • Маникюр в Москве</title>
+  <meta name="description" content="Запишитесь онлайн за 30 секунд • Стерильность 100% • Более 5 лет опыта">
+  <meta property="og:title" content="Василики — идеальный маникюр в Москве">
+  <meta property="og:description" content="Запишитесь онлайн за 30 секунд">
+  <meta property="og:image" content="https://твой-домен.рф/calendar/preview.jpg">
+  <meta name="theme-color" content="#c9a08a">
+
+  <link rel="manifest" href="/calendar/manifest.json">
+  <link rel="apple-touch-icon" href="/calendar/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- HERO с параллаксом -->
+  <section class="hero-parallax">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1 class="hero-title">Василики</h1>
+        <p class="hero-subtitle">Идеальный маникюр в Москве</p>
+        <a href="calendar.html" class="btn-hero">Записаться онлайн</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Почему меня выбирают -->
+  <section class="features-section">
+    <div class="container">
+      <h2 class="section-title">Почему выбирают меня</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">Sterile</div>
+          <h3>100% стерильность</h3>
+          <p>Инструменты в крафт-пакетах</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">Experience</div>
+          <h3>5+ лет опыта</h3>
+          <p>Более 3000 довольных клиенток</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">Quality</div>
+          <h3>Только премиум материалы</h3>
+          <p>Luxio, Luna, Kodi Professional</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Карта 2GIS -->
+  <section class="map-section">
+    <div class="container">
+      <h2 class="section-title">Где я работаю</h2>
+      <div id="dgis-map"></div>
+    </div>
+  </section>
+
+  <!-- Финальная кнопка — по центру -->
+  <section class="cta-section">
+    <div class="container">
+      <a href="calendar.html" class="btn-cta">Записаться прямо сейчас</a>
+    </div>
+  </section>
+
+  <!-- PWA кнопка установки -->
+  <button id="installButton" class="install-btn">Установить приложение</button>
+
+  <!-- === 2GIS + PWA — РАБОЧАЯ ВЕРСИЯ 2025 === -->
+ <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const mapSection = document.querySelector('.map-section');
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        load2GIS();
+        observer.unobserve(mapSection);
+      }
+    }, { rootMargin: "300px" });
+    observer.observe(mapSection);
+  });
+
+  function load2GIS() {
+    // Если уже загружен — сразу рисуем
+    if (window.DG && typeof DG.map === 'function') {
+      initMap();
+      return;
+    }
+
+    // Грузим скрипт
+    const script = document.createElement('script');
+    script.src = "https://maps.api.2gis.ru/2.0/loader.js?pkg=full";
+    script.async = true;
+
+    script.onload = () => {
+      // Ждём именно инициализацию DG (иногда DG.then не срабатывает)
+      const waitForDG = setInterval(() => {
+        if (window.DG && DG.map) {
+          clearInterval(waitForDG);
+          initMap();
+        }
+      }, 100);
+
+      // На всякий случай таймаут 8 сек
+      setTimeout(() => clearInterval(waitForDG), 8000);
+    };
+
+    script.onerror = showFallback;
+    document.head.appendChild(script);
+  }
+
+  function initMap() {
+    DG.map('dgis-map', {
+      center: [55.7558, 37.6173],   // ← поменяй на свои координаты
+      zoom: 16,
+      scrollWheelZoom: false
+    }).then(map => {
+      DG.marker([55.7558, 37.6173])
+        .addTo(map)
+        .bindPopup('Василики • Маникюр в Москве')
+        .openPopup();
+    }).catch(showFallback);
+  }
+
+  function showFallback() {
+    document.getElementById('dgis-map').innerHTML = `
+      <div style="height:520px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#faf8f5;color:#6b5b5b;font-size:1.5rem;border-radius:32px;padding:40px;text-align:center;">
+        <div style="font-size:5rem;margin-bottom:20px">📍</div>
+        <div>Москва, ул. Ленина, д.25</div>
+        <div style="margin-top:16px;font-size:1.1rem;color:#8a6f5b">
+          Карта временно недоступна<br>Но я жду вас по этому адресу ❤️
+        </div>
+      </div>
+    `;
+  }
+
+  // PWA остаётся без изменений
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installButton').style.display = 'block';
+  });
+  document.getElementById('installButton').onclick = () => {
+    document.getElementById('installButton').style.display = 'none';
+    deferredPrompt.prompt();
+  };
+</script>
+
+</body>
+</html>

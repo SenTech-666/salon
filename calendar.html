@@ -1,0 +1,40 @@
+<!-- calendar.html — чистейшая структура -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Василики • Запись</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#C9A08A">
+  <script type="module" src="src/components.js"></script>
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+
+<div id="calendar-container">
+  <header class="header">
+    <button onclick="location.href='index.html'" 
+            style="position:absolute;left:20px;top:20px;background:none;border:none;color:var(--text-light);font-size:1.5rem;cursor:pointer;">
+      ← Главная
+    </button>
+    <h1>Запись</h1>
+  </header>
+
+  <div class="month-nav">
+    <button id="prevMonth">‹</button>
+    <h2 id="currentMonth"></h2>
+    <button id="nextMonth">›</button>
+  </div>
+
+  <div class="weekdays">
+    <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+  </div>
+
+  <div id="calendar"></div>
+</div>
+
+<div id="modal-root"></div>
+</body>
+</html>
