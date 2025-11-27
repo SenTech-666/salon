@@ -816,13 +816,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 }
 /* === АДАПТИВ ДЛЯ СЕТКИ ВРЕМЕНИ — НАСЫПАЛ ПО ПОЛНОЙ, ЧТОБЫ БОЛЬШЕ НЕ ЕБАЛА МОЗГИ === */
 @media (max-width: 640px) {
-  .time-slots-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 14px !important;
-    max-width: 380px !important;
-    margin: 32px auto 20px !important;
-    padding: 0 16px !important;
-  }
+ 
   .time-slot {
     padding: 15px 8px !important;
     font-size: 1.05rem !important;
@@ -831,12 +825,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 }
 
 @media (max-width: 480px) {
-  .time-slots-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 12px !important;
-    max-width: 340px !important;
-    padding: 0 12px !important;
-  }
+  
   .time-slot {
     padding: 14px 6px !important;
     font-size: 1rem !important;
@@ -844,12 +833,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 }
 
 @media (max-width: 380px) {
-  .time-slots-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px !important;
-    max-width: 280px !important;
-    padding: 0 10px !important;
-  }
+ 
   .time-slot {
     padding: 13px 6px !important;
     font-size: 0.95rem !important;
@@ -857,11 +841,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 }
 
 @media (max-width: 340px) {
-  .time-slots-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 10px !important;
-    max-width: 240px !important;
-  }
+ 
   .time-slot {
     padding: 12px 4px !important;
     font-size: 0.9rem !important;
@@ -870,10 +850,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 
 /* Если совсем узкий экран (старые андроиды) — делаем 2 колонки и похуй */
 @media (max-width: 320px) {
-  .time-slots-grid {
-    gap: 8px !important;
-    max-width: 220px !important;
-  }
+ 
   .time-slot {
     padding: 11px 4px !important;
     font-size: 0.85rem !important;
@@ -911,4 +888,176 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
   font-weight: 900 !important;
   color: #222 !important;
   letter-spacing: -1.5px !important;
+}
+/* ==========================================================================
+   НАСТРОЙКИ СЕТКИ ВРЕМЕНИ И МОДАЛКИ НА МОБИЛЕ — ВСЁ В ОДНОМ МЕСТЕ
+   Просто меняй цифры под себя, и будет тебе счастье
+   ========================================================================== */
+
+/* 1. Общая ширина модалки на телефонах — чем больше %, тем шире окно */
+@media (max-width: 640px) {
+  .modal {
+    width: 96% !important;        /* 92 → 96 → 98 → 100 — выбирай */
+    max-width: none !important;   /* убираем жёсткий лимит 500px */
+    padding: 40px 24px !important; /* внутренние отступы модалки */
+  }
+}
+
+/* 2. Основная сетка времени — сколько колонок и как сильно по центру */
+.time-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);   /* на десктопе всегда 4 колонки */
+  gap: 18px;                               /* расстояние между слотами */
+  margin: 36px auto 28px !important;       /* отступы сверху/снизу + центрирование */
+  max-width: 520px !important;             /* максимальная ширина на большом экране */
+  padding: 0 20px;                         /* боковые отступы на десктопе */
+  justify-content: center;
+}
+
+/* 3. Мобильная версия — 3 колонки (для большинства телефонов) */
+@media (max-width: 640px) {
+  .time-slots-grid {
+    grid-template-columns: repeat(3, 1fr) !important;  /* 3 колонки */
+    gap: 20px !important;                              /* побольше расстояние */
+    max-width: 440px !important;                       /* не даём растянуться слишком сильно */
+    padding: 0 16px !important;
+  }
+}
+
+/* 4. Совсем узкие экраны — 2 жирные колонки (iPhone SE, старые андроиды) */
+@media (max-width: 420px) {
+  .time-slots-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 24px !important;            /* ещё больше воздуха между кнопками */
+    max-width: 340px !important;
+    padding: 0 32px !important;
+  }
+}
+
+/* 5. Сами кнопки времени — тут крути размер и жирность под себя */
+.time-slot {
+  padding: 22px 12px !important;     /* вертикаль / горизонталь — делай больше = крупнее кнопки */
+  font-size: 1.2rem !important;      /* размер шрифта */
+  font-weight: 700 !important;       /* 600 = средне, 700 = жирно, 800-900 = ультра-жирно */
+  border-radius: 32px !important;    /* скругление углов */
+  border: 3px solid var(--border) !important;
+  min-height: 76px !important;       /* минимальная высота, чтоб все одной высоты */
+  transition: all 0.35s ease !important;
+}
+
+/* Ховер и выбранный слот — анимация подъёма */
+.time-slot:hover:not(.blocked),
+.time-slot.selected {
+  transform: translateY(-10px) scale(1.07) !important;
+  box-shadow: 0 24px 60px rgba(201,160,138,0.5) !important;
+}
+
+/* 6. Заблокированные слоты — внешний вид (меняй под вкус) */
+.time-slot.blocked {
+  background: #fdf2f2 !important;          /* светло-розовый фон */
+  border: 3px dashed #e57373 !important;   /* пунктирная рамка */
+  color: #c62828 !important;
+  position: relative;
+  opacity: 1 !important;
+}
+
+.time-slot.blocked::after {
+  content: "ЗАКРЫТО";              /* ← сюда пиши что угодно: ЗАКРЫТО / ЗАПИСЬ / НЕТ / FULL */
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;              /* размер надписи */
+  font-weight: 900;
+  color: #c62828;
+  pointer-events: none;
+}
+
+/* 7. Если хочешь ещё жирнее на совсем мелких экранах — раскомментируй */
+/*
+@media (max-width: 380px) {
+  .time-slot {
+    padding: 28px 16px !important;
+    font-size: 1.35rem !important;
+  }
+}
+*/
+/* === ПОЛНЫЙ И ОКОНЧАТЕЛЬНЫЙ ФИКС — ЧТОБЫ СЛОТЫ ВРЕМЕНИ НИКОГДА НЕ ВЫЛАЗИЛИ ЗА МОДАЛКУ === */
+.modal {
+  padding: 40px 20px !important;   /* уменьшаем боковые отступы модалки */
+  overflow: hidden !important;     /* ВАЖНО!!! запрещаем вылазить за края */
+  border-radius: 32px !important;
+}
+
+.time-slots-grid {
+  padding: 0 !important;                    /* убираем все свои паддинги */
+  width: 100% !important;                  /* растягиваем на всю ширину модалки */
+  max-width: 100% !important;               /* больше никаких жёстких лимитов */
+  box-sizing: border-box !important;
+  margin: 32px 0 24px !important;           /* только вертикальные отступы */
+}
+
+/* На мобиле — строго 3 колонки, и всё влезет в модалку как надо */
+@media (max-width: 640px) {
+  .time-slots-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 18px !important;
+  }
+  
+  .time-slot {
+    padding: 20px 12px !important;
+    font-size: 1.15rem !important;
+    border-radius: 32px !important;
+  }
+}
+
+/* На супер-узких — 2 колонки */
+@media (max-width: 400px) {
+  .time-slots-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 22px !important;
+  }
+  
+  .time-slot {
+    padding: 26px 12px !important;
+    font-size: 1.25rem !important;
+  }
+}
+/* === МОБИЛЬНЫЙ МИНИМАЛИЗМ — ТОЛЬКО ЧИСЛО + ЦВЕТ + <select> === */
+@media (max-width: 640px) {
+  .status, .day-number ~ div { display: none !important; }
+  .day-number { font-size: 2rem !important; font-weight: 900 !important; }
+  .day { position: relative; }
+  .day select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .mobile-own-mark {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 1.4rem;
+    z-index: 5;
+  }
+
+  /* Цвета по загруженности */
+  .load-0   { background: #ffffff !important; }
+  .load-10  { background: #fff5f5 !important; }
+  .load-20  { background: #ffebeb !important; }
+  .load-30  { background: #ffd8d8 !important; }
+  .load-40  { background: #ffc7c7 !important; }
+  .load-50  { background: #ffb3b3 !important; }
+  .load-60  { background: #ff9e9e !important; }
+  .load-70  { background: #ff8a8a !important; }
+  .load-80  { background: #ff7575 !important; }
+  .load-90  { background: #ff6161 !important; }
+  .load-100, .blocked-full { background: #d32f2f !important; color: white !important; }
+  .blocked-full .day-number, .load-100 .day-number { color: white !important; }
+  .past { background: #f5f5f5 !important; opacity: 0.6; }
 }
