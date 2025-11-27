@@ -1157,13 +1157,13 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
   }
 
   .day-number {
-    font-size: 2.1rem !important;
+    font-size: 1.1rem !important;
   }
 }
 /* Делаем ячейки КВАДРАТНЫМИ, а не круглыми (убираем --radius на мобиле) */
 @media (max-width: 768px) {
   .day {
-    border-radius: 18px !important;   /* ← было слишком кругло — теперь приятно квадратные с углами */
+    border-radius: 10px !important;   /* ← было слишком кругло — теперь приятно квадратные с углами */
   }
 }
 
@@ -1176,6 +1176,6 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 
 /* Если где-то остался старый радиус — принудительно фиксим */
 .day {
-  border-radius: 18px !important;     /* ← ГЛАВНЫЙ ФИКС: теперь везде квадратные с нормальными углами */
+  border-radius: 10px !important;     /* ← ГЛАВНЫЙ ФИКС: теперь везде квадратные с нормальными углами */
   overflow: hidden;                   /* ← чтоб внутренние элементы не вылезали */
 }
