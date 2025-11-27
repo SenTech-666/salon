@@ -23,6 +23,15 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
   max-width: 720px;
   margin: 0 auto;
   padding: 50px 20px;
+  display: flex;              /* ← ДОБАВИЛ */
+  flex-direction: column;     /* ← ДОБАВИЛ */
+  align-items: center;        /* ← ЦЕНТРИРУЕМ ВСЁ ПО ЦЕНТРУ */
+}
+.weekdays,
+#calendar {
+  justify-content: center !important;   /* ← ГАРАНТИРОВАННО ПО ЦЕНТРУ */
+  width: 100%;
+  max-width: 100%;
 }
 
 .header h1 {
@@ -998,66 +1007,175 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
   margin: 32px 0 24px !important;           /* только вертикальные отступы */
 }
 
-/* На мобиле — строго 3 колонки, и всё влезет в модалку как надо */
-@media (max-width: 640px) {
-  .time-slots-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 18px !important;
+/* ==================== МОБИЛЬНЫЙ ФИНАЛ — КВАДРАТНЫЕ ЯЧЕЙКИ + КОМПАКТНЫЕ КНОПКИ ВРЕМЕНИ ==================== */
+@media (max-width: 768px) {
+  :root {
+    --cell: calc((100vw - 40px - 6 * 10px) / 7) !important;
+    --gap: 10px !important;
   }
-  
-  .time-slot {
-    padding: 20px 12px !important;
-    font-size: 1.15rem !important;
-    border-radius: 32px !important;
-  }
-}
 
-/* На супер-узких — 2 колонки */
-@media (max-width: 400px) {
-  .time-slots-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 22px !important;
+  /* КВАДРАТНЫЕ ячейки календаря + лёгкие углы */
+  .day {
+    width: var(--cell) !important;
+    height: var(--cell) !important;
+    min-height: var(--cell) !important;
+    border-radius: 18px !important; /* не круглые, но приятно закруглённые */
+    padding: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    position: relative !important;
   }
-  
-  .time-slot {
-    padding: 26px 12px !important;
-    font-size: 1.25rem !important;
+
+  .day-number {
+    font-size: 1.95rem !important;
+    font-weight: 900 !important;
   }
-}
-/* === МОБИЛЬНЫЙ МИНИМАЛИЗМ — ТОЛЬКО ЧИСЛО + ЦВЕТ + <select> === */
-@media (max-width: 640px) {
-  .status, .day-number ~ div { display: none !important; }
-  .day-number { font-size: 2rem !important; font-weight: 900 !important; }
-  .day { position: relative; }
-  .day select {
+
+  /* Полностью убираем текст статуса — только цвет и галочка/крестик */
+  .status {
+    display: none !important;
+  }
+
+  /* Своя запись — зелёная галка в углу */
+  .day.own::after {
+    content: "✓";
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    z-index: 10;
-  }
-  .mobile-own-mark {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    font-size: 1.4rem;
+    top: 10px;
+    right: 12px;
+    font-size: 1.7rem;
+    color: #4caf50;
+    font-weight: bold;
     z-index: 5;
   }
 
-  /* Цвета по загруженности */
-  .load-0   { background: #ffffff !important; }
-  .load-10  { background: #fff5f5 !important; }
-  .load-20  { background: #ffebeb !important; }
-  .load-30  { background: #ffd8d8 !important; }
-  .load-40  { background: #ffc7c7 !important; }
-  .load-50  { background: #ffb3b3 !important; }
-  .load-60  { background: #ff9e9e !important; }
-  .load-70  { background: #ff8a8a !important; }
-  .load-80  { background: #ff7575 !important; }
-  .load-90  { background: #ff6161 !important; }
-  .load-100, .blocked-full { background: #d32f2f !important; color: white !important; }
-  .blocked-full .day-number, .load-100 .day-number { color: white !important; }
-  .past { background: #f5f5f5 !important; opacity: 0.6; }
+  /* День закрыт мастером — красный крест */
+  .day.blocked-full::after {
+    content: "✕";
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 1.9rem;
+    color: white;
+    font-weight: bold;
+    z-index: 5;
+  }
+
+  /* Прошлые дни — серые */
+  .day.past {
+    background: #f0f0f0 !important;
+    opacity: 0.6;
+  }
+}
+
+@media (max-width: 640px) {
+  /* МОДАЛКА — скроллится, ничего не вылезает */
+  .modal-backdrop {
+    align-items: flex-start !important;
+    padding-top: 5vh;
+  }
+
+  .modal {
+    max-height: 95vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-radius: 28px 28px 0 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  /* ВРЕМЯ В МОДАЛКЕ — КОМПАКТНЕЕ, ЧТОБ НЕ КАК КИРПИЧИ */
+  .time-grid-old {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px !important;
+    padding: 0 12px;
+    margin: 20px 0;
+  }
+
+  .time-slot-old {
+    padding: 14px 8px !important;
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+    border-radius: 20px !important;
+    text-align: center;
+    min-height: 56px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .time-slot-old.free {
+    background: var(--card);
+    border: 2px solid var(--border);
+  }
+
+  .time-slot-old.blocked {
+    background: #ffebee;
+    border: 2px solid #ff6b6b;
+    color: #c62828;
+  }
+
+  .time-slot-old.selected {
+    background: var(--accent) !important;
+    color: white !important;
+    transform: scale(1.05);
+  }
+
+  /* Уменьшаем шрифты в форме */
+  .modal h3 { font-size: 1.9rem !important; }
+  .modal input, .modal select { 
+    font-size: 1rem !important; 
+    padding: 14px !important;
+    margin: 10px 0 !important;
+  }
+
+  #selectedTimeInfo {
+    font-size: 1.22rem !important;
+    margin: 20px 0 16px !important;
+  }
+
+  .main {
+    padding: 16px !important;
+    font-size: 1.1rem !important;
+  }
+}
+
+/* На совсем узких экранах — 2 колонки времени */
+@media (max-width: 420px) {
+  .time-grid-old {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 18px !important;
+  }
+
+  .time-slot-old {
+    padding: 18px 10px !important;
+    font-size: 1.2rem !important;
+    min-height: 64px !important;
+  }
+
+  .day-number {
+    font-size: 2.1rem !important;
+  }
+}
+/* Делаем ячейки КВАДРАТНЫМИ, а не круглыми (убираем --radius на мобиле) */
+@media (max-width: 768px) {
+  .day {
+    border-radius: 18px !important;   /* ← было слишком кругло — теперь приятно квадратные с углами */
+  }
+}
+
+/* На совсем мелких экранах — тоже не круглые */
+@media (max-width: 480px) {
+  .day {
+    border-radius: 16px !important;   /* ← чуть поменьше, но всё ещё квадратные */
+  }
+}
+
+/* Если где-то остался старый радиус — принудительно фиксим */
+.day {
+  border-radius: 18px !important;     /* ← ГЛАВНЫЙ ФИКС: теперь везде квадратные с нормальными углами */
+  overflow: hidden;                   /* ← чтоб внутренние элементы не вылезали */
 }

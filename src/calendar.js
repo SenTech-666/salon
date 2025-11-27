@@ -1,26 +1,23 @@
-// src/calendar.js — УЛЬТРА-ФИНАЛЬНАЯ ВЕРСИЯ НОЯБРЬ 2025 + МОБИЛЬНЫЙ АДАПТИВ НА 100500%
-// Блокировка дня только по fullDay: true — без костылей и багов
+// src/calendar.js — УЛЬТРА-ФИНАЛЬНАЯ ВЕРСИЯ ДЕКАБРЬ 2025
+// Теперь день блокируется ТОЛЬКО если реально всё занято или fullDay
 
 import { store } from "./store.js";
 import { todayISO, getClientId } from "./utils.js";
 
 const daysOfWeek = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
-// Функция пересчёта --cell и --gap при ресайзе — теперь всегда влезает, сука!
+// Адаптив ячеек
 function updateCSSVariables() {
   const width = window.innerWidth;
   let cellSize, gapSize;
 
   if (width <= 480) {
-    // Мобилки — максимальная компактность
-    cellSize = `calc((100vw - 40px - 6 * 6px) / 7)`;  // 6 зазоров по 6px
+    cellSize = `calc((100vw - 40px - 6 * 6px) / 7)`;
     gapSize = "6px";
   } else if (width <= 768) {
-    // Планшеты
     cellSize = `calc((100vw - 60px - 6 * 8px) / 7)`;
     gapSize = "8px";
   } else {
-    // Десктоп — как было
     cellSize = "150px";
     gapSize = "14px";
   }
@@ -29,11 +26,10 @@ function updateCSSVariables() {
   document.documentElement.style.setProperty('--gap', gapSize);
 }
 
-// Вызываем сразу и при каждом ресайзе (поворот экрана и т.д.)
 updateCSSVariables();
 window.addEventListener('resize', () => {
   updateCSSVariables();
-  renderCalendar(); // Перерисовываем, чтоб клетки сразу подстроились
+  renderCalendar();
 });
 
 export const renderCalendar = function () {
@@ -44,34 +40,53 @@ export const renderCalendar = function () {
   const date = store.currentDate;
   const year = date.getFullYear();
   const month = date.getMonth();
-
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7;
 
-  // Заголовок месяца
   document.getElementById("currentMonth").textContent =
     date.toLocaleDateString("ru-RU", { month: "long", year: "numeric" })
       .replace(/^\w/, c => c.toUpperCase());
 
-  // Дни недели
   weekdaysEl.innerHTML = daysOfWeek.map(d => `<div>${d}</div>`).join("");
 
-  // Пустые ячейки до первого дня
   let html = "";
   for (let i = 0; i < firstDayIndex; i++) html += `<div></div>`;
 
-  // Дни месяца
+  // === Генерируем все возможные слоты (10:00 — 20:30) ===
+  const allSlots = [];
+  for (let h = 10; h <= 20; h++) {
+    allSlots.push(`${h.toString().padStart(2, "0")}:00`);
+    if (h < 20) allSlots.push(`${h.toString().padStart(2, "0")}:30`);
+  }
+
+  const isSlotTaken = (dateISO, time) => {
+    const blocked = store.blocked.some(b => b.date === dateISO && b.time === time);
+    if (blocked) return true;
+
+    return store.bookings.some(b => {
+      if (b.date !== dateISO) return false;
+      const [h1, m1] = time.split(":").map(Number);
+      const slotStart = h1 * 60 + m1;
+      const [h2, m2] = b.time.split(":").map(Number);
+      const bookStart = h2 * 60 + m2;
+      const bookEnd = bookStart + (b.duration || 60);
+      return slotStart >= bookStart && slotStart < bookEnd;
+    });
+  };
+
   for (let day = 1; day <= daysInMonth; day++) {
     const dateISO = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const isToday = dateISO === todayISO;
     const isPast = dateISO < todayISO;
 
-    const dayBookings = store.bookings.filter(b => b.date === dateISO && b.time !== "00:00");
-    const hasOwnBooking = dayBookings.some(b => b.clientId && b.clientId === store.clientId);
-    const hasAnyBooking = dayBookings.length > 0;
+    const dayBookings = store.bookings.filter(b => b.date === dateISO);
+    const hasOwnBooking = dayBookings.some(b => b.clientId === store.clientId);
 
     const isFullyBlocked = store.blocked.some(b => b.date === dateISO && b.fullDay === true);
-    const hasPartialBlock = store.blocked.some(b => b.date === dateISO && b.time && !b.fullDay);
+    const hasPartialBlock = store.blocked.some(b => b.date === dateISO && !b.fullDay && b.time);
+
+    // Ключевая проверка: ВСЁ ли занято?
+    const isFullyBooked = allSlots.every(slot => isSlotTaken(dateISO, slot));
 
     let classes = "day";
     let statusHtml = "";
@@ -82,13 +97,13 @@ export const renderCalendar = function () {
     if (hasOwnBooking) {
       statusHtml = `<div class="status your-booking">Ваша запись</div>`;
       classes += " own";
-    } else if (hasAnyBooking) {
-      statusHtml = `<div class="status booked">Занято</div>`;
-      classes += " booked";
     } else if (isFullyBlocked) {
       statusHtml = `<div class="status blocked">День закрыт</div>`;
       classes += " blocked-full";
-    } else if (hasPartialBlock) {
+    } else if (isFullyBooked) {
+      statusHtml = `<div class="status booked">Нет мест</div>`;
+      classes += " booked"; // Только если РЕАЛЬНО всё занято
+    } else if (dayBookings.length > 0 || hasPartialBlock) {
       statusHtml = `<div class="status partial">Частично</div>`;
       classes += " partial";
     } else {
@@ -104,17 +119,17 @@ export const renderCalendar = function () {
 
   calendarEl.innerHTML = html;
 
-  // Клик по дню — только по свободным и не прошлым
+  // Клик — теперь только по действительно недоступным дням
   calendarEl.onclick = (e) => {
     const dayEl = e.target.closest(".day");
     if (!dayEl?.dataset?.date) return;
 
     const date = dayEl.dataset.date;
-    const isBlockedFull = dayEl.classList.contains("blocked-full");
-    const isBooked = dayEl.classList.contains("booked");
-    const isPastDay = dayEl.classList.contains("past");
+    const isPast = dayEl.classList.contains("past");
+    const isFullyBlocked = dayEl.classList.contains("blocked-full");
+    const isFullyBooked = dayEl.classList.contains("booked");
 
-    if (isPastDay || isBooked || isBlockedFull) return;
+    if (isPast || isFullyBlocked || isFullyBooked) return;
 
     if (typeof window.showBookingModal === "function") {
       window.showBookingModal(date);
@@ -122,7 +137,7 @@ export const renderCalendar = function () {
   };
 };
 
-// Навигация по месяцам
+// Навигация
 document.getElementById("prevMonth")?.addEventListener("click", () => {
   import("./store.js").then(m => m.prevMonth()).then(renderCalendar);
 });
@@ -131,11 +146,9 @@ document.getElementById("nextMonth")?.addEventListener("click", () => {
   import("./store.js").then(m => m.nextMonth()).then(renderCalendar);
 });
 
-// Первый рендер после получения clientId
 getClientId().then(id => {
   store.clientId = id;
   renderCalendar();
 });
 
-// Шутка от меня: теперь твой календарь влезет даже в жопу муравья, если тот откроет сайт на Nokia 3310 😂
-console.log("%cКАЛЕНДАРЬ АДАПТИРОВАН ПОД ВСЕ ЭКРАНЫ, ДАЖЕ ЕСЛИ ТЫ СМОТРИШЬ С ЧАСОВ", "color: lime; font-size: 16px; font-weight: bold");
+console.log("%cКАЛЕНДАРЬ ТЕПЕРЬ РАБОТАЕТ ПРАВИЛЬНО — ДЕНЬ НЕ БЛОКИРУЕТСЯ, ПОКА ЕСТЬ СВОБОДНОЕ ВРЕМЯ", "color: lime; font-size: 18px; font-weight: bold");

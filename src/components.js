@@ -1,4 +1,4 @@
-// src/components.js — ПОСЛЕДНЯЯ ВЕРСИЯ: ДАЖЕ ПОЛНОСТЬЮ ЗАНЯТЫЙ ДЕНЬ НЕ ОТКРОЕТСЯ (27.11.2025)
+// src/components.js — ФИНАЛЬНАЯ ВЕРСИЯ 27.11.2025 + ФИКС ДЛИТЕЛЬНОСТИ УСЛУГИ ПРИ СМЕНЕ
 
 console.log("%ccomponents.js — ПОЛНОСТЬЮ ЗАНЯТЫЙ ДЕНЬ = НЕ ОТКРОЕТСЯ НИКОГДА", "color: red; font-size: 22px; font-weight: bold");
 
@@ -30,20 +30,18 @@ onSnapshot(bookingsCol, snap => {
 
 onSnapshot(collection(db, "services"), snap => {
   services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  forceUpdateClientSelect();
+  forceUpdateClientSelect(); // ← перерисовываем селект
 });
 
 // === ГЛАВНАЯ ПРОВЕРКА ПЕРЕД ОТКРЫТИЕМ ===
 window.showBookingModal = (dateISO) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return toast("Ошибка даты", "error");
 
-  // 1. Блокировка мастером
   const isFullyBlocked = store.blocked.some(b => b.date === dateISO && b.fullDay === true);
   if (isFullyBlocked && !store.isAdmin) {
     return toast("Этот день закрыт мастером", "error");
   }
 
-  // 2. НОВАЯ ПРОВЕРКА: день полностью занят?
   const isDayFullyBooked = () => {
     const allSlots = [];
     for (let h = 10; h <= 20; h++) {
@@ -85,7 +83,6 @@ const openClientModal = (dateStr) => {
   currentModalDate = dateStr;
   window.currentModalDate = dateStr;
 
-  // Дополнительная защита внутри модалки
   const isDayFullyBlocked = store.blocked.some(b => b.date === dateStr && b.fullDay === true);
   if (isDayFullyBlocked) {
     closeModal();
@@ -162,10 +159,13 @@ const openClientModal = (dateStr) => {
     </p>
   `);
 
-  setTimeout(forceUpdateClientSelect, 100);
+  // Даём модалке чуть времени появиться → потом пихаем услуги
+  setTimeout(() => {
+    forceUpdateClientSelect();
+  }, 120);
 };
 
-// === Остальное без изменений (selectTime, bookAppointment и т.д.) ===
+// === КЛЮЧЕВОЙ ФИКС: обновление длительности при смене услуги ===
 window.selectTime = (time, el) => {
   const stillFree = !store.blocked.some(b => b.date === currentModalDate && (b.time === time || b.fullDay === true))
     && !store.bookings.some(b => {
@@ -187,13 +187,15 @@ window.selectTime = (time, el) => {
   document.querySelectorAll('.time-slot-old').forEach(e => e.classList.remove('selected'));
   el.classList.add('selected');
   window.selectedTimeForBooking = time;
-  updateSelectedTimeInfo();
 
+  // Показываем поля и сразу обновляем текст с длительностью
   document.getElementById('selectedTimeInfo').style.display = 'block';
   document.getElementById('clientName').style.display = 'block';
   document.getElementById('clientPhone').style.display = 'block';
   document.getElementById('service').style.display = 'block';
   document.getElementById('finalStep').style.display = 'block';
+
+  updateSelectedTimeInfo(); // ← сразу покажем (даже если услуга ещё не выбрана)
   document.getElementById('clientName').focus();
 };
 
@@ -240,23 +242,39 @@ window.bookAppointment = async () => {
   }
 };
 
+// === ОБНОВЛЕНИЕ СЕЛЕКТА + ПОВЕШИВАНИЕ change ===
 function forceUpdateClientSelect() {
   const select = document.getElementById("service");
   if (!select) return;
-  const prev = select.value;
+
+  const prevValue = select.value;
+
   select.innerHTML = `<option value="">Выберите услугу</option>` +
-    services.map(s => `<option value="${s.id}" ${s.id === prev ? "selected" : ""}>
-      ${s.name} — ${s.price}₽ (${s.duration} мин)
-    </option>`).join("");
-  if (window.selectedTimeForBooking) updateSelectedTimeInfo();
+    services.map(s => `
+      <option value="${s.id}" ${s.id === prevValue ? "selected" : ""}>
+        ${s.name} — ${s.price}₽ (${s.duration} мин)
+      </option>
+    `).join("");
+
+  // САМОЕ ГЛАВНОЕ: вешаем обработчик смены услуги
+  select.addEventListener("change", updateSelectedTimeInfo);
+
+  // Если время уже выбрано — сразу обновляем текст
+  if (window.selectedTimeForBooking) {
+    updateSelectedTimeInfo();
+  }
 }
 
+// === Функция обновления текста "Выбрано: 17:00 (120 мин)" ===
 function updateSelectedTimeInfo() {
   const select = document.getElementById("service");
-  if (!select || !window.selectedTimeForBooking) return;
-  const svc = services.find(s => s.id === select.value);
-  const dur = svc ? svc.duration : 60;
-  document.getElementById("chosenTime").textContent = `${window.selectedTimeForBooking} (${dur} мин)`;
+  const timeEl = document.getElementById("chosenTime");
+  if (!select || !timeEl || !window.selectedTimeForBooking) return;
+
+  const service = services.find(s => s.id === select.value);
+  const duration = service ? service.duration : 60;
+
+  timeEl.textContent = `${window.selectedTimeForBooking} (${duration} мин)`;
 }
 
 window.blockDay = async (dateStr) => {
@@ -269,4 +287,4 @@ window.blockDay = async (dateStr) => {
 window.showBookingModal = showBookingModal;
 window.closeModal = closeModal;
 
-console.log("%cГОТОВО. Даже полностью занятый день — не откроется. Никогда.", "color: gold; font-size: 24px; font-weight: bold");
+console.log("%cФИКС: Теперь при смене услуги — длительность обновляется мгновенно! Мобилька — огонь!", "color: lime; font-size: 20px; font-weight: bold");
