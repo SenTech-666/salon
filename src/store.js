@@ -2,6 +2,7 @@
 let state = {
   currentDate: new Date(),
   bookings: [],
+  blocked: [],
   services: [],
   isAdmin: false,
   clientId: null
@@ -10,31 +11,31 @@ let state = {
 const listeners = new Set();
 
 export const store = new Proxy(state, {
-  set: function(target, prop, value) {
+  set: (target, prop, value) => {
     target[prop] = value;
-    listeners.forEach(function(fn) { fn(); });
+    listeners.forEach(fn => fn());
     return true;
   }
 });
 
-export const subscribe = function(fn) {
+export const subscribe = (fn) => {
   listeners.add(fn);
   fn();
-  return function() { listeners.delete(fn); };
+  return () => listeners.delete(fn);
 };
 
-export const prevMonth = function() {
+export const prevMonth = () => {
   const d = new Date(store.currentDate);
   d.setMonth(d.getMonth() - 1);
   const now = new Date();
   if (!store.isAdmin && (d.getFullYear() < now.getFullYear() || (d.getFullYear() === now.getFullYear() && d.getMonth() < now.getMonth()))) {
-    if (window.toast) toast("Прошлые месяцы недоступны", "error");
+    window.toast?.("Прошлые месяцы недоступны", "error");
     return;
   }
   store.currentDate = d;
 };
 
-export const nextMonth = function() {
+export const nextMonth = () => {
   const d = new Date(store.currentDate);
   d.setMonth(d.getMonth() + 1);
   store.currentDate = d;

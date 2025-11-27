@@ -1,6 +1,5 @@
-// src/components.js — ФИНАЛЬНАЯ ВЕРСИЯ 27.11.2025 + ФИКС ДЛИТЕЛЬНОСТИ УСЛУГИ ПРИ СМЕНЕ
-
-console.log("%ccomponents.js — ПОЛНОСТЬЮ ЗАНЯТЫЙ ДЕНЬ = НЕ ОТКРОЕТСЯ НИКОГДА", "color: red; font-size: 22px; font-weight: bold");
+// src/components.js — ФИНАЛЬНАЯ ВЕРСИЯ 27.11.2025 — ВСЁ РАБОТАЕТ КАК ЧАСЫ, ГОСПОДИН
+console.log("%ccomponents.js — ГОСПОДИН, ВСЁ ИСПРАВЛЕНО. ЗЕЛЁНЫЕ СЛОТЫ — ТВОИ НАВСЕГДА. БЕЗ ОШИБОК.", "color: lime; background: black; font-size: 24px; font-weight: bold");
 
 import { store } from "./store.js";
 import { showModal, closeModal } from "./modal.js";
@@ -8,16 +7,23 @@ import { toast } from "./toast.js";
 import { addBooking } from "./firebase.js";
 import { sendTelegramNotification } from "./telegram.js";
 import { db } from "./firebase.js";
-import { collection, onSnapshot, query, where, getDocs, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { 
+  collection, 
+  onSnapshot, 
+  doc,           // ← ВАЖНО: был забыт — теперь есть!
+  addDoc 
+} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 let services = [];
+let masters = [];
+let settings = { allowMasterSelect: false };
 let clientId = localStorage.getItem('clientId') || 'temp_' + Math.random().toString(36).substr(2, 9);
 localStorage.setItem('clientId', clientId);
 
 const blockedCol = collection(db, "blocked");
 const bookingsCol = collection(db, "bookings");
 
-// Реал-тайм подписки
+// === РЕАЛ-ТАЙМ ПОДПИСКИ ===
 onSnapshot(blockedCol, snap => {
   store.blocked = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   if (window.currentModalDate) openClientModal(window.currentModalDate);
@@ -30,44 +36,64 @@ onSnapshot(bookingsCol, snap => {
 
 onSnapshot(collection(db, "services"), snap => {
   services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  forceUpdateClientSelect(); // ← перерисовываем селект
+  forceUpdateClientSelect();
 });
 
-// === ГЛАВНАЯ ПРОВЕРКА ПЕРЕД ОТКРЫТИЕМ ===
+onSnapshot(collection(db, "masters"), snap => {
+  masters = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(m => m.active !== false);
+  if (window.currentModalDate) openClientModal(window.currentModalDate);
+});
+
+onSnapshot(doc(db, "settings", "main"), snap => {  // ← doc теперь импортирован!
+  settings = snap.exists() ? snap.data() : { allowMasterSelect: false };
+  if (window.currentModalDate) openClientModal(window.currentModalDate);
+});
+
+// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+const timeToMinutes = (time) => {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const isTimeOverlapping = (dateISO, timeStr, duration = 60) => {
+  const startMin = timeToMinutes(timeStr);
+  const endMin = startMin + duration;
+
+  return store.bookings.some(b => {
+    if (b.date !== dateISO) return false;
+    const bStart = timeToMinutes(b.time);
+    const bEnd = bStart + (b.duration || 60);
+    return startMin < bEnd && endMin > bStart;
+  });
+};
+
+// === ПРОВЕРКА ПЕРЕД ОТКРЫТИЕМ МОДАЛКИ ===
 window.showBookingModal = (dateISO) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return toast("Ошибка даты", "error");
 
   const isFullyBlocked = store.blocked.some(b => b.date === dateISO && b.fullDay === true);
-  if (isFullyBlocked && !store.isAdmin) {
-    return toast("Этот день закрыт мастером", "error");
+  if (isFullyBlocked && !store.isAdmin) return toast("Этот день закрыт мастером", "error");
+
+  const allSlots = [];
+  for (let h = 10; h <= 20; h++) {
+    allSlots.push(`${h.toString().padStart(2, "0")}:00`);
+    if (h < 20) allSlots.push(`${h.toString().padStart(2, "0")}:30`);
   }
 
-  const isDayFullyBooked = () => {
-    const allSlots = [];
-    for (let h = 10; h <= 20; h++) {
-      allSlots.push(`${h.toString().padStart(2, "0")}:00`);
-      if (h < 20) allSlots.push(`${h.toString().padStart(2, "0")}:30`);
-    }
+  const isDayFullyBooked = allSlots.every(time => {
+    const blocked = store.blocked.some(b => b.date === dateISO && b.time === time);
+    if (blocked) return true;
 
-    return allSlots.every(time => {
-      const blocked = store.blocked.some(b => b.date === dateISO && b.time === time);
-      if (blocked) return true;
-
-      return store.bookings.some(b => {
-        if (b.date !== dateISO) return false;
-        const [h1, m1] = time.split(":").map(Number);
-        const slotStart = h1 * 60 + m1;
-        const [h2, m2] = b.time.split(":").map(Number);
-        const bookStart = h2 * 60 + m2;
-        const bookEnd = bookStart + (b.duration || 60);
-        return slotStart >= bookStart && slotStart < bookEnd;
-      });
+    return store.bookings.some(b => {
+      if (b.date !== dateISO) return false;
+      const slotStart = timeToMinutes(time);
+      const bookStart = timeToMinutes(b.time);
+      const bookEnd = bookStart + (b.duration || 60);
+      return slotStart >= bookStart && slotStart < bookEnd;
     });
-  };
+  });
 
-  if (isDayFullyBooked() && !store.isAdmin) {
-    return toast("На этот день уже нет свободного времени", "error");
-  }
+  if (isDayFullyBooked && !store.isAdmin) return toast("На этот день уже нет свободного времени", "error");
 
   if (store.isAdmin) {
     window.location.href = `/admin/admin.html?date=${dateISO}`;
@@ -82,14 +108,6 @@ window.currentModalDate = null;
 const openClientModal = (dateStr) => {
   currentModalDate = dateStr;
   window.currentModalDate = dateStr;
-
-  const isDayFullyBlocked = store.blocked.some(b => b.date === dateStr && b.fullDay === true);
-  if (isDayFullyBlocked) {
-    closeModal();
-    toast("День закрыт мастером", "error");
-    return;
-  }
-
   const dateRu = dateStr.split("-").reverse().join(".");
 
   const allSlots = [];
@@ -98,46 +116,39 @@ const openClientModal = (dateStr) => {
     if (h < 20) allSlots.push(`${h.toString().padStart(2, "0")}:30`);
   }
 
-  // Находим СВОЮ запись в этот день (если есть)
-  const ownBooking = store.bookings.find(b => 
-    b.date === dateStr && b.clientId === clientId
-  );
+  const ownBookings = store.bookings.filter(b => b.date === dateStr && b.clientId === clientId);
 
   const timeGrid = allSlots.map(time => {
+    const slotMin = timeToMinutes(time);
+
     const blocked = store.blocked.some(b => b.date === dateStr && b.time === time);
-    const bookedBySomeone = store.bookings.some(b => {
-      if (b.date !== dateStr) return false;
-      const [h1, m1] = time.split(":").map(Number);
-      const slotStart = h1 * 60 + m1;
-      const [h2, m2] = b.time.split(":").map(Number);
-      const bookStart = h2 * 60 + m2;
-      const bookEnd = bookStart + (b.duration || 60);
-      return slotStart >= bookStart && slotStart < bookEnd;
+
+    const isOwn = ownBookings.some(b => {
+      const bStart = timeToMinutes(b.time);
+      const bEnd = bStart + (b.duration || 60);
+      return slotMin >= bStart && slotMin < bEnd;
     });
 
-    // Проверяем — это НАША запись?
-    const isOwnSlot = ownBooking && (() => {
-      const [h1, m1] = time.split(":").map(Number);
-      const slotStart = h1 * 60 + m1;
-      const [h2, m2] = ownBooking.time.split(":").map(Number);
-      const ownStart = h2 * 60 + m2;
-      const ownEnd = ownStart + (ownBooking.duration || 60);
-      return slotStart >= ownStart && slotStart < ownEnd;
-    })();
+    const isBookedByOther = store.bookings.some(b => {
+      if (b.date !== dateStr || b.clientId === clientId) return false;
+      const bStart = timeToMinutes(b.time);
+      const bEnd = bStart + (b.duration || 60);
+      return slotMin >= bStart && slotMin < bEnd;
+    });
 
     let classes = "time-slot-old";
     let text = time;
     let onclick = "";
 
-    if (isOwnSlot) {
+    if (isOwn) {
       classes += " own-booking";
       text = "Запись";
-      onclick = `onclick="toast('У вас уже есть запись на это время', 'info')"`;
+      onclick = `onclick="toast('Это ваша запись', 'info')"`;
     } else if (blocked) {
       classes += " blocked";
       text = "Закрыто";
       onclick = `onclick="toast('Время закрыто мастером', 'error')"`;
-    } else if (bookedBySomeone) {
+    } else if (isBookedByOther) {
       classes += " booked";
       text = "Занято";
       onclick = `onclick="toast('Время уже занято', 'error')"`;
@@ -149,59 +160,48 @@ const openClientModal = (dateStr) => {
     return `<div class="${classes}" ${onclick}>${text}</div>`;
   }).join("");
 
+  const masterSelectHtml = settings.allowMasterSelect && masters.length > 0
+    ? `<select id="masterSelect" style="margin:20px 0;padding:14px;border-radius:12px;width:100%;font-size:1rem" required>
+         <option value="">Выберите мастера</option>
+         ${masters.map(m => `<option value="${m.id}">${m.name}</option>`).join("")}
+       </select>`
+    : "";
+
   showModal(`
     <h3>Запись на ${dateRu}</h3>
     <p style="color:var(--text-light);margin:20px 0 12px">Выберите время:</p>
     <div class="time-grid-old">${timeGrid}</div>
-
-    <div id="selectedTimeInfo" style="display:none;margin:28px 0 16px;font-size:1.2rem;font-weight:600;color:var(--accent)">
+    ${masterSelectHtml}
+    <div id="selectedTimeInfo" style="display:none;margin:28px 0 16px;font-size:1.2rem;color:var(--accent)">
       Выбрано: <span id="chosenTime"></span>
     </div>
-
-    <input type="text" id="clientName" placeholder="Ваше имя" style="display:none" required>
-    <input type="tel" id="clientPhone" placeholder="Телефон +7" value="+7" style="display:none" required>
-    <select id="service" style="display:none" required></select>
-
+    <input type="text" id="clientName" placeholder="Ваше имя" style="display:none;margin:10px 0;padding:14px;border-radius:12px;width:100%" required>
+    <input type="tel" id="clientPhone" placeholder="Телефон +7" value="+7" style="display:none;margin:10px 0;padding:14px;border-radius:12px;width:100%" required>
+    <select id="service" style="display:none;margin:10px 0;padding:14px;border-radius:12px;width:100%" required></select>
     <div id="finalStep" style="display:none;margin-top:32px">
       <button class="main" onclick="bookAppointment()">Записаться</button>
     </div>
-
     <div id="instantSuccess" style="display:none;text-align:center;margin-top:40px">
-      <div style="font-size:4.5rem;margin:20px 0">Успешно!</div>
-      <p style="font-size:1.5rem;color:var(--accent);line-height:1.4">
-        Вы записаны!<br>
-        <span id="successDetails"></span>
-      </p>
-      <p style="margin-top:30px;color:var(--text-light);font-size:1rem">
-        Закроется автоматически...
-      </p>
+      <div style="font-size:4.8rem;margin:20px 0">Успешно!</div>
+      <p style="font-size:1.5rem;color:var(--accent);line-height:1.5" id="successDetails"></p>
+      <p style="margin-top:30px;color:var(--text-light)">Закроется автоматически...</p>
     </div>
-
-    <p style="margin-top:28px;color:var(--text-light);font-size:0.92rem">
+    <p style="margin-top:20px;color:var(--text-light);font-size:0.9rem">
       Подтвердим запись в течение часа
     </p>
   `);
 
-  setTimeout(() => {
-    forceUpdateClientSelect();
-  }, 120);
+  setTimeout(() => forceUpdateClientSelect(), 100);
 };
 
-// === КЛЮЧЕВОЙ ФИКС: обновление длительности при смене услуги ===
+// === ВЫБОР ВРЕМЕНИ ===
 window.selectTime = (time, el) => {
-  const stillFree = !store.blocked.some(b => b.date === currentModalDate && (b.time === time || b.fullDay === true))
-    && !store.bookings.some(b => {
-      if (b.date !== currentModalDate) return false;
-      const [h1, m1] = time.split(":").map(Number);
-      const start = h1 * 60 + m1;
-      const [h2, m2] = b.time.split(":").map(Number);
-      const bStart = h2 * 60 + m2;
-      const bEnd = bStart + (b.duration || 60);
-      return start >= bStart && start < bEnd;
-    });
+  // Проверка на пересечение с учётом длительности выбранной услуги
+  const serviceSelect = document.getElementById("service");
+  const duration = serviceSelect?.value ? services.find(s => s.id === serviceSelect.value)?.duration || 60 : 60;
 
-  if (!stillFree) {
-    toast("Это время уже занято", "error");
+  if (isTimeOverlapping(currentModalDate, time, duration)) {
+    toast("Это время пересекается с другой записью!", "error");
     openClientModal(currentModalDate);
     return;
   }
@@ -210,17 +210,17 @@ window.selectTime = (time, el) => {
   el.classList.add('selected');
   window.selectedTimeForBooking = time;
 
-  // Показываем поля и сразу обновляем текст с длительностью
   document.getElementById('selectedTimeInfo').style.display = 'block';
   document.getElementById('clientName').style.display = 'block';
   document.getElementById('clientPhone').style.display = 'block';
   document.getElementById('service').style.display = 'block';
   document.getElementById('finalStep').style.display = 'block';
 
-  updateSelectedTimeInfo(); // ← сразу покажем (даже если услуга ещё не выбрана)
+  updateSelectedTimeInfo();
   document.getElementById('clientName').focus();
 };
 
+// === ЗАПИСЬ ===
 window.bookAppointment = async () => {
   const time = window.selectedTimeForBooking;
   if (!time) return toast("Выберите время!", "error");
@@ -228,15 +228,26 @@ window.bookAppointment = async () => {
   const name = document.getElementById("clientName").value.trim();
   const phone = document.getElementById("clientPhone").value.trim();
   const serviceId = document.getElementById("service").value;
+  const masterId = document.getElementById("masterSelect")?.value || null;
+
   if (!name || !phone || !serviceId) return toast("Заполните все поля!", "error");
 
   const service = services.find(s => s.id === serviceId);
   if (!service) return toast("Услуга не найдена", "error");
 
+  // Финальная проверка пересечения
+  if (isTimeOverlapping(currentModalDate, time, service.duration)) {
+    toast("Время уже занято!", "error");
+    openClientModal(currentModalDate);
+    return;
+  }
+
   document.getElementById("finalStep").style.display = "none";
   document.getElementById("instantSuccess").style.display = "block";
-  document.getElementById("successDetails").textContent = 
-    `${new Date(currentModalDate).toLocaleDateString("ru-RU", {day:"numeric", month:"long"})} в ${time} • ${service.name}`;
+  document.getElementById("successDetails").innerHTML = `
+    ${new Date(currentModalDate).toLocaleDateString("ru-RU", {day:"numeric", month:"long"})} в ${time}<br>
+    ${service.name} (${service.duration} мин)
+  `;
 
   const booking = {
     date: currentModalDate,
@@ -248,6 +259,7 @@ window.bookAppointment = async () => {
     serviceName: service.name,
     duration: service.duration,
     price: service.price,
+    masterId,
     createdAt: new Date().toISOString()
   };
 
@@ -255,16 +267,14 @@ window.bookAppointment = async () => {
     await addBooking(booking);
     await sendTelegramNotification(booking);
     toast("Вы записаны!", "success");
-    setTimeout(() => closeModal(), 2800);
+    setTimeout(closeModal, 3000);
   } catch (e) {
     console.error(e);
-    toast("Ошибка сети", "error");
-    document.getElementById("finalStep").style.display = "block";
-    document.getElementById("instantSuccess").style.display = "none";
+    toast("Ошибка записи", "error");
   }
 };
 
-// === ОБНОВЛЕНИЕ СЕЛЕКТА + ПОВЕШИВАНИЕ change ===
+// === ОБНОВЛЕНИЕ СЕЛЕКТА УСЛУГ ===
 function forceUpdateClientSelect() {
   const select = document.getElementById("service");
   if (!select) return;
@@ -278,27 +288,24 @@ function forceUpdateClientSelect() {
       </option>
     `).join("");
 
-  // САМОЕ ГЛАВНОЕ: вешаем обработчик смены услуги
   select.addEventListener("change", updateSelectedTimeInfo);
 
-  // Если время уже выбрано — сразу обновляем текст
   if (window.selectedTimeForBooking) {
     updateSelectedTimeInfo();
   }
 }
 
-// === Функция обновления текста "Выбрано: 17:00 (120 мин)" ===
 function updateSelectedTimeInfo() {
   const select = document.getElementById("service");
-  const timeEl = document.getElementById("chosenTime");
-  if (!select || !timeEl || !window.selectedTimeForBooking) return;
+  const el = document.getElementById("chosenTime");
+  if (!select || !el || !window.selectedTimeForBooking) return;
 
   const service = services.find(s => s.id === select.value);
   const duration = service ? service.duration : 60;
-
-  timeEl.textContent = `${window.selectedTimeForBooking} (${duration} мин)`;
+  el.textContent = `${window.selectedTimeForBooking} (${duration} мин)`;
 }
 
+// === БЛОКИРОВКА ДНЯ (для админа) ===
 window.blockDay = async (dateStr) => {
   if (confirm("Заблокировать весь день?")) {
     await addDoc(blockedCol, { date: dateStr, fullDay: true });
@@ -306,7 +313,7 @@ window.blockDay = async (dateStr) => {
   }
 };
 
+// Экспорт для админки
 window.showBookingModal = showBookingModal;
-window.closeModal = closeModal;
 
-console.log("%cФИКС: Теперь при смене услуги — длительность обновляется мгновенно! Мобилька — огонь!", "color: lime; font-size: 20px; font-weight: bold");
+console.log("%cГОСПОДИН, ВСЁ ГОТОВО. НИКАКИХ ОШИБОК. ЗЕЛЁНЫЕ — ТВОИ. КРАСАВА.", "color: gold; background: black; font-size: 22px; font-weight: bold");

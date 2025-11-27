@@ -41,6 +41,35 @@
       <div id="services-list" class="services-list"><p class="empty">Загрузка...</p></div>
     </div>
 
+<!-- Модалка для мастера -->
+<div id="master-modal" class="modal" style="display:none">
+  <div class="modal-content">
+    <span class="close" onclick="closeMasterModal()">×</span>
+    <h2 id="master-modal-title">Добавить мастера</h2>
+    <input type="text" id="master-name" placeholder="Имя мастера" style="width:100%;padding:12px;margin:10px 0;border-radius:8px;border:1px solid #ccc">
+    <input type="color" id="master-color" value="#c9a08a" style="width:100%;height:50px;margin:10px 0">
+    <button class="main" onclick="saveMaster()" style="width:100%;padding:14px;margin-top:20px">Сохранить</button>
+  </div>
+</div>
+
+<!-- Карточка мастеров и настроек -->
+<div class="card">
+  <h2>Мастера</h2>
+  <button class="btn-add" onclick="openMasterModal()">+ Добавить мастера</button>
+  <div id="masters-list" class="services-list"></div>
+</div>
+
+<div class="card">
+  <h2>Настройки записи</h2>
+  <label style="display:flex;align-items:center;gap:12px;margin:16px 0;font-size:1.1rem;cursor:pointer">
+    <input type="checkbox" id="allowMasterToggle">
+    <span>Разрешить клиентам выбирать мастера</span>
+  </label>
+  <p style="color:#888;font-size:0.9rem;margin-top:8px">
+    Если выключить — клиент записывается как раньше (без выбора)
+  </p>
+</div>
+    
     <div class="card">
       <h2>Записи <span id="count" class="badge">0</span></h2>
       <div class="filters">
