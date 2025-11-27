@@ -1170,7 +1170,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 /* На совсем мелких экранах — тоже не круглые */
 @media (max-width: 480px) {
   .day {
-    border-radius: 16px !important;   /* ← чуть поменьше, но всё ещё квадратные */
+    border-radius: 10px !important;   /* ← чуть поменьше, но всё ещё квадратные */
   }
 }
 
