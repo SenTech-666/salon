@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход администратора • Василики</title>
+  <link rel="stylesheet" href="admin.css">
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); }
+    .login-box {
+      background:white; padding:40px; border-radius:28px; box-shadow:var(--shadow); width:90%; max-width:420px; text-align:center;
+    }
+    h1 { font-family:'Playfair Display',serif; font-size:2.8rem; color:var(--accent); margin-bottom:20px; }
+    input { width:100%; padding:16px; margin:12px 0; border:2px solid var(--border); border-radius:16px; font-size:1.1rem; }
+    button { width:100%; padding:18px; background:var(--accent); color:white; border:none; border-radius:50px; font-weight:600; font-size:1.2rem; cursor:pointer; margin-top:20px; }
+    button:hover { background:var(--accent-hover); transform:translateY(-3px); }
+    .error { color:var(--error); margin-top:16px; font-weight:600; }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h1>Администратор</h1>
+    <p>Вход в полную админку</p>
+    
+    <input type="email" id="email" placeholder="Email" value="admin@vasiliki.ru">
+    <input type="password" id="password" placeholder="Пароль">
+    
+    <button onclick="loginSuper()">Войти</button>
+    <div class="error" id="error"></div>
+  </div>
+
+  <script>
+    // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+    // МЕНЯЙ ТОЛЬКО ЗДЕСЬ — ТВОИ ДАННЫЕ
+    const SUPER_EMAIL = "admin@vasiliki.ru";
+    const SUPER_PASS  = "123";   // ← поменяй на свой пароль
+    // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+
+    window.loginSuper = () => {
+      const email = document.getElementById("email").value.trim();
+      const pass  = document.getElementById("password").value;
+
+      if (email === SUPER_EMAIL && pass === SUPER_PASS) {
+        localStorage.setItem("superAdminAuth", "true");
+        location.href = "admin.html";
+      } else {
+        document.getElementById("error").textContent = "Неправильный email или пароль, милорд";
+      }
+    };
+
+    // Enter → вход
+    document.addEventListener("keydown", e => {
+      if (e.key === "Enter") loginSuper();
+    });
+  </script>
+</body>
+</html>

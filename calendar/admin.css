@@ -1,0 +1,128 @@
+/* styles.css — ЕДИНЫЙ СТИЛЬ ВАСИЛИКИ 2025 */
+:root {
+  --bg: #faf8f5;
+  --card: #ffffff;
+  --text: #3c2f2f;
+  --text-light: #6b5b5b;
+  --accent: #c9a08a;
+  --accent-hover: #b38a72;
+  --border: #e8e2db;
+  --shadow: 0 12px 40px rgba(0,0,0,0.08);
+  --shadow-hover: 0 20px 60px rgba(0,0,0,0.12);
+  --radius: 32px;
+  --error: #ff5252;
+  --warning: #ff9800;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+
+.container { max-width:1200px; margin:0 auto; padding:40px 20px; }
+
+h1, h2, h3 { font-family:'Playfair Display',serif; color:var(--accent); }
+h1 { font-size:3.2rem; text-align:center; margin-bottom:16px; }
+h2 { font-size:2.4rem; margin-bottom:28px; }
+
+.card {
+  background:var(--card);
+  border-radius:var(--radius);
+  padding:40px;
+  box-shadow:var(--shadow);
+  border:1px solid var(--border);
+  margin-bottom:40px;
+}
+
+.btn {
+  background:var(--accent);
+  color:white;
+  border:none;
+  padding:16px 32px;
+  border-radius:50px;
+  font-weight:600;
+  font-size:1.1rem;
+  cursor:pointer;
+  transition:all 0.3s;
+  box-shadow:0 6px 20px rgba(201,160,138,0.3);
+}
+.btn:hover { background:var(--accent-hover); transform:translateY(-3px); box-shadow:0 12px 30px rgba(201,160,138,0.4); }
+.btn-danger { background:#ff5252; }
+.btn-warning { background:#ff9800; }
+
+.input {
+  width:100%;
+  padding:18px;
+  border:2px solid var(--border);
+  border-radius:20px;
+  font-size:1.1rem;
+  background:var(--bg);
+  margin:12px 0;
+}
+
+.grid { display:grid; gap:20px; }
+.grid-3 { grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }
+
+.text-center { text-align:center; }
+.mt-20 { margin-top:20px; }
+.mb-40 { margin-bottom:40px; }
+
+.modal {
+  position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:9999;
+}
+.modal.show { display:flex; }
+.modal-content {
+  background:var(--card);
+  padding:40px;
+  border-radius:var(--radius);
+  max-width:520px;
+  width:90%;
+  box-shadow:var(--shadow-hover);
+}
+.close {
+  float:right;
+  font-size:2.5rem;
+  cursor:pointer;
+  color:#aaa;
+}
+.close:hover { color:#000; }
+/* ПЕРЕКЛЮЧАТЕЛЬ МАСТЕРА — КАК У БОГОВ */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 64px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background: var(--accent);
+}
+
+input:checked + .slider:before {
+  transform: translateX(30px);
+}

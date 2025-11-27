@@ -1,4 +1,3 @@
-<!-- calendar.html — чистейшая структура -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -8,8 +7,8 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#C9A08A">
-  <script type="module" src="src/components.js"></script>
   <script type="module" src="src/main.js"></script>
+  <script type="module" src="src/components.js"></script>
 </head>
 <body>
 
@@ -21,6 +20,17 @@
     </button>
     <h1>Запись</h1>
   </header>
+
+  <!-- ВЫБОР МАСТЕРА СВЕРХУ — КАК ТЫ И ХОТЕЛ -->
+  <div id="master-select-container" style="margin:32px 20px 20px;text-align:center;">
+    <label style="display:block;font-size:1.3rem;font-weight:600;color:var(--accent);margin-bottom:12px">
+      Выберите мастера
+    </label>
+    <select id="globalMasterSelect" 
+            style="padding:16px;border-radius:16px;width:100%;max-width:460px;font-size:1.1rem;background:#fdfbf9;border:2px solid var(--border);">
+      <option value="">Общий график (все мастера)</option>
+    </select>
+  </div>
 
   <div class="month-nav">
     <button id="prevMonth">‹</button>
