@@ -1,10 +1,40 @@
-// src/calendar.js — ЧИСТАЯ ФИНАЛЬНАЯ ВЕРСИЯ НОЯБРЬ 2025
+// src/calendar.js — УЛЬТРА-ФИНАЛЬНАЯ ВЕРСИЯ НОЯБРЬ 2025 + МОБИЛЬНЫЙ АДАПТИВ НА 100500%
 // Блокировка дня только по fullDay: true — без костылей и багов
 
 import { store } from "./store.js";
 import { todayISO, getClientId } from "./utils.js";
 
 const daysOfWeek = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+// Функция пересчёта --cell и --gap при ресайзе — теперь всегда влезает, сука!
+function updateCSSVariables() {
+  const width = window.innerWidth;
+  let cellSize, gapSize;
+
+  if (width <= 480) {
+    // Мобилки — максимальная компактность
+    cellSize = `calc((100vw - 40px - 6 * 6px) / 7)`;  // 6 зазоров по 6px
+    gapSize = "6px";
+  } else if (width <= 768) {
+    // Планшеты
+    cellSize = `calc((100vw - 60px - 6 * 8px) / 7)`;
+    gapSize = "8px";
+  } else {
+    // Десктоп — как было
+    cellSize = "150px";
+    gapSize = "14px";
+  }
+
+  document.documentElement.style.setProperty('--cell', cellSize);
+  document.documentElement.style.setProperty('--gap', gapSize);
+}
+
+// Вызываем сразу и при каждом ресайзе (поворот экрана и т.д.)
+updateCSSVariables();
+window.addEventListener('resize', () => {
+  updateCSSVariables();
+  renderCalendar(); // Перерисовываем, чтоб клетки сразу подстроились
+});
 
 export const renderCalendar = function () {
   const calendarEl = document.getElementById("calendar");
@@ -36,12 +66,10 @@ export const renderCalendar = function () {
     const isToday = dateISO === todayISO;
     const isPast = dateISO < todayISO;
 
-    // Записи клиента
     const dayBookings = store.bookings.filter(b => b.date === dateISO && b.time !== "00:00");
     const hasOwnBooking = dayBookings.some(b => b.clientId && b.clientId === store.clientId);
     const hasAnyBooking = dayBookings.length > 0;
 
-    // Проверяем настоящую блокировку fullDay
     const isFullyBlocked = store.blocked.some(b => b.date === dateISO && b.fullDay === true);
     const hasPartialBlock = store.blocked.some(b => b.date === dateISO && b.time && !b.fullDay);
 
@@ -76,7 +104,7 @@ export const renderCalendar = function () {
 
   calendarEl.innerHTML = html;
 
-  // Клик по дню — открываем модалку (только по свободным)
+  // Клик по дню — только по свободным и не прошлым
   calendarEl.onclick = (e) => {
     const dayEl = e.target.closest(".day");
     if (!dayEl?.dataset?.date) return;
@@ -108,3 +136,6 @@ getClientId().then(id => {
   store.clientId = id;
   renderCalendar();
 });
+
+// Шутка от меня: теперь твой календарь влезет даже в жопу муравья, если тот откроет сайт на Nokia 3310 😂
+console.log("%cКАЛЕНДАРЬ АДАПТИРОВАН ПОД ВСЕ ЭКРАНЫ, ДАЖЕ ЕСЛИ ТЫ СМОТРИШЬ С ЧАСОВ", "color: lime; font-size: 16px; font-weight: bold");
