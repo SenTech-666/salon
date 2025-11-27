@@ -1040,7 +1040,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 
   /* Своя запись — зелёная галка в углу */
   .day.own::after {
-    content: "✓";
+  
     position: absolute;
     top: 10px;
     right: 12px;
@@ -1052,7 +1052,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 
   /* День закрыт мастером — красный крест */
   .day.blocked-full::after {
-    content: "✕";
+   
     position: absolute;
     top: 10px;
     right: 12px;
@@ -1178,4 +1178,101 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 .day {
   border-radius: 10px !important;     /* ← ГЛАВНЫЙ ФИКС: теперь везде квадратные с нормальными углами */
   overflow: hidden;                   /* ← чтоб внутренние элементы не вылезали */
+}
+/* ========================================= */
+/* МОБИЛЬНАЯ ВЕРСИЯ — ЦВЕТ ЯЧЕЕК ПО ТОЧНОМУ ЗАДАНИЮ */
+/* ========================================= */
+@media (max-width: 768px) {
+
+  /* 1. ТВОЯ СОБСТВЕННАЯ ЗАПИСЬ — ЯРКО-ЗЕЛЁНЫЙ, ЧТОБЫ СРАЗУ ВИДЕТЬ */
+  .day.own {
+    background: #00e676 !important;     /* ядерный зелёный, как у миллиардера */
+    color: white !important;
+    border-radius: 12px !important;
+  }
+
+  .day.own .day-number,
+  .day.own .status {
+    color: white !important;
+  }
+
+  .day.own .status.your-booking {
+    background: rgba(255,255,255,0.25) !important;
+    font-weight: 700;
+  }
+
+  /* 2. ЧУЖИЕ ЗАПИСИ ЕСТЬ (частично занято) — ОРАНЖЕВО-ЖЁЛТЫЙ, как и было */
+  .day.partial {
+    background: #fdcf44ab !important;     /* оранжевый — "кто-то уже тут" */
+    color: white !important;
+  }
+
+  .day.partial .status {
+    background: rgba(255,255,255,0.2) !important;
+  }
+
+  /* 3. ПОЛНОСТЬЮ ЗАБИТО — КРАСНЫЙ */
+  .day.booked {
+    background: #f44336 !important;
+    color: white !important;
+  }
+
+  .day.booked .status {
+    background: rgba(255,255,255,0.2) !important;
+  }
+
+  /* 4. ДЕНЬ "ЗАКРЫТ" МАСТЕРОМ — теперь "Запись" (по прошлому желанию) */
+  .day.has-booking {
+    background: var(--accent) !important;
+    color: white !important;
+  }
+
+  .day.has-booking .status {
+    background: rgba(255,255,255,0.2) !important;
+  }
+}
+
+/* На десктопе оставляем всё красиво и аккуратно */
+@media (min-width: 769px) {
+  .day.own {
+    border: 3px solid #00e676 !important;
+    background: linear-gradient(135deg, rgba(0,230,118,0.15), rgba(0,230,118,0.05)) !important;
+  }
+
+  .day.own .status.your-booking {
+    background: #00e676 !important;
+    color: white !important;
+  }
+}
+/* Оставь только это — минимализм рулит */
+.day.own { background: #00e676 !important; color: white !important; } /* твоя запись */
+.day.partial { background: #d1997b !important; color: white !important; } /* чужие есть */
+.day.booked { background: #f44336 !important; color: white !important; } /* забито */
+.day.master-closed { background: #f51919d7 !important; color: white !important; } /* мастер закрыл, но "Запись" */
+.day.past { opacity: 0.3; pointer-events: none; }
+.day.today .day-number { font-weight: 800; color: #222; }
+/* В МОДАЛКЕ: СВОЯ ЗАПИСЬ — ЗЕЛЁНАЯ + "Запись" */
+.time-slot-old.own-booking {
+  background: #00e676 !important;
+  color: white !important;
+  font-weight: 700 !important;
+  border: 2px solid #00c853 !important;
+  cursor: default !important;
+}
+
+.time-slot-old.own-booking:hover {
+  transform: none !important;
+}
+
+/* Остальные — как были */
+.time-slot-old.blocked {
+  background: #ffebee !important;
+  color: #c62828 !important;
+  border: 2px solid #ff6b6b !important;
+}
+
+.time-slot-old.booked {
+  background: #fff0f0 !important;
+  color: #999 !important;
+  border: 2px dashed #ddd !important;
 }

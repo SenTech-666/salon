@@ -1,6 +1,4 @@
-// src/calendar.js — УЛЬТРА-ФИНАЛЬНАЯ ВЕРСИЯ ДЕКАБРЬ 2025
-// Теперь день блокируется ТОЛЬКО если реально всё занято или fullDay
-
+// src/calendar.js — УЛЬТРА-ФИНАЛЬНАЯ ВЕРСИЯ ДЕКАБРЬ 2025 + ВАШИ ПОСЛЕДНИЕ УКАЗАНИЯ
 import { store } from "./store.js";
 import { todayISO, getClientId } from "./utils.js";
 
@@ -52,7 +50,7 @@ export const renderCalendar = function () {
   let html = "";
   for (let i = 0; i < firstDayIndex; i++) html += `<div></div>`;
 
-  // === Генерируем все возможные слоты (10:00 — 20:30) ===
+  // === Все возможные слоты с 10:00 до 20:30 ===
   const allSlots = [];
   for (let h = 10; h <= 20; h++) {
     allSlots.push(`${h.toString().padStart(2, "0")}:00`);
@@ -82,10 +80,9 @@ export const renderCalendar = function () {
     const dayBookings = store.bookings.filter(b => b.date === dateISO);
     const hasOwnBooking = dayBookings.some(b => b.clientId === store.clientId);
 
-    const isFullyBlocked = store.blocked.some(b => b.date === dateISO && b.fullDay === true);
+    const isFullyBlockedByMaster = store.blocked.some(b => b.date === dateISO && b.fullDay === true);
     const hasPartialBlock = store.blocked.some(b => b.date === dateISO && !b.fullDay && b.time);
 
-    // Ключевая проверка: ВСЁ ли занято?
     const isFullyBooked = allSlots.every(slot => isSlotTaken(dateISO, slot));
 
     let classes = "day";
@@ -94,18 +91,27 @@ export const renderCalendar = function () {
     if (isPast) classes += " past";
     if (isToday) classes += " today";
 
+    // 1. Ваша личная запись — приоритет выше всего
     if (hasOwnBooking) {
       statusHtml = `<div class="status your-booking">Ваша запись</div>`;
       classes += " own";
-    } else if (isFullyBlocked) {
-      statusHtml = `<div class="status blocked">День закрыт</div>`;
-      classes += " blocked-full";
+
+    // 2. Мастер закрыл весь день — показываем "Запись" (по вашему желанию)
+    } else if (isFullyBlockedByMaster) {
+      statusHtml = `<div class="status master-closed">Запись</div>`;
+      classes += " master-closed";           // ← новый класс
+
+    // 3. День полностью забит клиентами
     } else if (isFullyBooked) {
       statusHtml = `<div class="status booked">Нет мест</div>`;
-      classes += " booked"; // Только если РЕАЛЬНО всё занято
+      classes += " booked";
+
+    // 4. Есть хоть одна чужая запись или частичная блокировка
     } else if (dayBookings.length > 0 || hasPartialBlock) {
       statusHtml = `<div class="status partial">Частично</div>`;
       classes += " partial";
+
+    // 5. Полностью свободно
     } else {
       statusHtml = `<div class="status free">Свободно</div>`;
     }
@@ -119,17 +125,17 @@ export const renderCalendar = function () {
 
   calendarEl.innerHTML = html;
 
-  // Клик — теперь только по действительно недоступным дням
+  // Клик только по доступным дням
   calendarEl.onclick = (e) => {
     const dayEl = e.target.closest(".day");
     if (!dayEl?.dataset?.date) return;
 
     const date = dayEl.dataset.date;
     const isPast = dayEl.classList.contains("past");
-    const isFullyBlocked = dayEl.classList.contains("blocked-full");
     const isFullyBooked = dayEl.classList.contains("booked");
 
-    if (isPast || isFullyBlocked || isFullyBooked) return;
+    // Доступные дни: всё кроме прошлого и полностью забитого
+    if (isPast || isFullyBooked) return;
 
     if (typeof window.showBookingModal === "function") {
       window.showBookingModal(date);
@@ -151,4 +157,4 @@ getClientId().then(id => {
   renderCalendar();
 });
 
-console.log("%cКАЛЕНДАРЬ ТЕПЕРЬ РАБОТАЕТ ПРАВИЛЬНО — ДЕНЬ НЕ БЛОКИРУЕТСЯ, ПОКА ЕСТЬ СВОБОДНОЕ ВРЕМЯ", "color: lime; font-size: 18px; font-weight: bold");
+console.log("%cКАЛЕНДАРЬ — ФИНАЛЬНАЯ ВЕРСИЯ ОТ БОГА. ГОСПОДИН ДОВОЛЕН.", "color: gold; background: black; font-size: 20px; font-weight: bold");

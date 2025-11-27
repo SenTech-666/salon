@@ -98,32 +98,55 @@ const openClientModal = (dateStr) => {
     if (h < 20) allSlots.push(`${h.toString().padStart(2, "0")}:30`);
   }
 
-  const isSlotBlocked = (time) => store.blocked.some(b => b.date === dateStr && b.time === time);
-  const isSlotBooked = (time) => store.bookings.some(b => {
-    if (b.date !== dateStr) return false;
-    const [h1, m1] = time.split(":").map(Number);
-    const start = h1 * 60 + m1;
-    const [h2, m2] = b.time.split(":").map(Number);
-    const bStart = h2 * 60 + m2;
-    const bEnd = bStart + (b.duration || 60);
-    return start >= bStart && start < bEnd;
-  });
+  // Находим СВОЮ запись в этот день (если есть)
+  const ownBooking = store.bookings.find(b => 
+    b.date === dateStr && b.clientId === clientId
+  );
 
   const timeGrid = allSlots.map(time => {
-    const blocked = isSlotBlocked(time);
-    const booked = !blocked && isSlotBooked(time);
-    const unavailable = blocked || booked;
+    const blocked = store.blocked.some(b => b.date === dateStr && b.time === time);
+    const bookedBySomeone = store.bookings.some(b => {
+      if (b.date !== dateStr) return false;
+      const [h1, m1] = time.split(":").map(Number);
+      const slotStart = h1 * 60 + m1;
+      const [h2, m2] = b.time.split(":").map(Number);
+      const bookStart = h2 * 60 + m2;
+      const bookEnd = bookStart + (b.duration || 60);
+      return slotStart >= bookStart && slotStart < bookEnd;
+    });
 
-    const onclick = unavailable
-      ? `onclick="toast('${blocked ? 'Время закрыто мастером' : 'Время уже занято'}', 'error')"`
-      : `onclick="selectTime('${time}', this)"`;
+    // Проверяем — это НАША запись?
+    const isOwnSlot = ownBooking && (() => {
+      const [h1, m1] = time.split(":").map(Number);
+      const slotStart = h1 * 60 + m1;
+      const [h2, m2] = ownBooking.time.split(":").map(Number);
+      const ownStart = h2 * 60 + m2;
+      const ownEnd = ownStart + (ownBooking.duration || 60);
+      return slotStart >= ownStart && slotStart < ownEnd;
+    })();
 
-    return `
-      <div class="time-slot-old ${unavailable ? 'blocked' : 'free'}" ${onclick}>
-        ${time}
-        ${blocked ? '<span class="lock">Locked</span>' : ''}
-      </div>
-    `;
+    let classes = "time-slot-old";
+    let text = time;
+    let onclick = "";
+
+    if (isOwnSlot) {
+      classes += " own-booking";
+      text = "Запись";
+      onclick = `onclick="toast('У вас уже есть запись на это время', 'info')"`;
+    } else if (blocked) {
+      classes += " blocked";
+      text = "Закрыто";
+      onclick = `onclick="toast('Время закрыто мастером', 'error')"`;
+    } else if (bookedBySomeone) {
+      classes += " booked";
+      text = "Занято";
+      onclick = `onclick="toast('Время уже занято', 'error')"`;
+    } else {
+      classes += " free";
+      onclick = `onclick="selectTime('${time}', this)"`;
+    }
+
+    return `<div class="${classes}" ${onclick}>${text}</div>`;
   }).join("");
 
   showModal(`
@@ -159,7 +182,6 @@ const openClientModal = (dateStr) => {
     </p>
   `);
 
-  // Даём модалке чуть времени появиться → потом пихаем услуги
   setTimeout(() => {
     forceUpdateClientSelect();
   }, 120);
