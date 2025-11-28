@@ -28,77 +28,20 @@
     <button class="btn" onclick="openModal('service-modal')">+ Добавить услугу</button>
     <div id="services-list" class="grid mt-20"></div>
   </div>
-
+  
   <!-- МАСТЕРА -->
-  <!-- МАСТЕРА -->
-<div class="card" id="masters-card">
-  <h2>Мастера</h2>
-  <button class="btn" onclick="openMasterModal()">+ Добавить мастера</button>
-  <div id="masters-list" class="grid mt-20"></div>
-</div>
-<!-- МОДАЛКА МАСТЕРА -->
-<div id="master-modal" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="closeModal('master-modal')">×</span>
-    <h2>Редактировать мастера</h2>
-    <input class="input" id="master-name" placeholder="Имя мастера">
-    <input class="input" id="master-email" placeholder="Email (для входа)">
-    <input class="input" id="master-photo" placeholder="Ссылка на фото (опционально)">
-    <button class="btn" onclick="saveMaster()">Сохранить</button>
+  <div class="card" id="masters-card">
+    <h2>Мастера</h2>
+    <button class="btn" onclick="openMasterModal()">+ Добавить мастера</button>
+    <div id="masters-list" class="grid mt-20"></div>
   </div>
-</div>
-<!-- МОДАЛКА РЕДАКТИРОВАНИЯ ЗАПИСИ -->
-<div id="booking-modal" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="closeModal('booking-modal')">×</span>
-    <h2 style="color:var(--accent);">Редактировать запись</h2>
-    
-    <div style="background:#f9f5f3;padding:20px;border-radius:16px;margin-bottom:20px;">
-      <p><strong>Клиент:</strong> <span id="booking-client-name"></span></p>
-      <p><strong>Телефон:</strong> <span id="booking-client-phone"></span></p>
-      <p><strong>Услуга:</strong> <span id="booking-service-name"></span></p>
-    </div>
-
-    <div style="display:grid;gap:16px;">
-      <div>
-        <label style="display:block;margin-bottom:8px;font-weight:600;">Новая дата</label>
-        <input type="date" class="input" id="new-booking-date">
-      </div>
-      <div>
-        <label style="display:block;margin-bottom:8px;font-weight:600;">Новое время</label>
-        <select class="input" id="new-booking-time" style="height:56px;">
-          <option value="10:00">10:00</option>
-          <option value="11:00">11:00</option>
-          <option value="12:00">12:00</option>
-          <option value="13:00">13:00</option>
-          <option value="14:00">14:00</option>
-          <option value="15:00">15:00</option>
-          <option value="16:00">16:00</option>
-          <option value="17:00">17:00</option>
-          <option value="18:00">18:00</option>
-          <option value="19:00">19:00</option>
-          <option value="20:00">20:00</option>
-          <option value="21:00">21:00</option>
-        </select>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:12px;margin-top:24px;">
-      <button class="btn" onclick="transferBooking()" style="flex:1;">Перенести</button>
-      <button class="btn btn-danger" onclick="cancelBooking()" style="flex:1;">Отменить запись</button>
-    </div>
-    <button onclick="closeModal('booking-modal')" style="margin-top:12px;width:100%;padding:16px;background:#666;color:white;border:none;border-radius:20px;">
-      Закрыть
-    </button>
-  </div>
-</div>
 
   <!-- ЗАПИСИ -->
   <div class="card">
     <h2>Записи <span style="font-size:1rem;color:var(--text-light);font-weight:normal;">(всего: <span id="count">0</span>)</span></h2>
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;">
-      <input type="text" class="input" id="search" placeholder="Поиск по имени или телефону..." oninput="filterBookings()">
-      <input type="date" class="input" id="filter-date" onchange="filterBookings()">
+      <input type="text" class="input" id="search" placeholder="Поиск по имени или телефону..." oninput="renderBookings()">
+      <input type="date" class="input" id="filter-date" onchange="renderBookings()">
     </div>
     <div id="bookings-list" class="grid"></div>
   </div>
@@ -131,11 +74,53 @@
 <div id="master-modal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeModal('master-modal')">×</span>
-    <h2>Мастер</h2>
+    <h2>Редактировать мастера</h2>
     <input class="input" id="master-name" placeholder="Имя мастера">
-    <input class="input" id="master-email" placeholder="Email для входа">
+    <input class="input" id="master-email" placeholder="Email (для входа)">
     <input class="input" id="master-photo" placeholder="Ссылка на фото (опционально)">
     <button class="btn" onclick="saveMaster()">Сохранить</button>
+  </div>
+</div>
+
+<div id="booking-modal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('booking-modal')">×</span>
+    <h2 style="color:var(--accent);">Редактировать запись</h2>
+    <div style="background:#f9f5f3;padding:20px;border-radius:16px;margin-bottom:20px;">
+      <p><strong>Клиент:</strong> <span id="booking-client-name"></span></p>
+      <p><strong>Телефон:</strong> <span id="booking-client-phone"></span></p>
+      <p><strong>Услуга:</strong> <span id="booking-service-name"></span></p>
+    </div>
+    <div style="display:grid;gap:16px;">
+      <div>
+        <label style="display:block;margin-bottom:8px;font-weight:600;">Новая дата</label>
+        <input type="date" class="input" id="new-booking-date">
+      </div>
+      <div>
+        <label style="display:block;margin-bottom:8px;font-weight:600;">Новое время</label>
+        <select class="input" id="new-booking-time" style="height:56px;">
+          <option value="10:00">10:00</option>
+          <option value="11:00">11:00</option>
+          <option value="12:00">12:00</option>
+          <option value="13:00">13:00</option>
+          <option value="14:00">14:00</option>
+          <option value="15:00">15:00</option>
+          <option value="16:00">16:00</option>
+          <option value="17:00">17:00</option>
+          <option value="18:00">18:00</option>
+          <option value="19:00">19:00</option>
+          <option value="20:00">20:00</option>
+          <option value="21:00">21:00</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:24px;">
+      <button class="btn" onclick="transferBooking()">Перенести</button>
+      <button class="btn btn-danger" onclick="cancelBooking()">Отменить запись</button>
+    </div>
+    <button onclick="closeModal('booking-modal')" style="margin-top:12px;width:100%;padding:16px;background:#666;color:white;border:none;border-radius:20px;">
+      Закрыть
+    </button>
   </div>
 </div>
 

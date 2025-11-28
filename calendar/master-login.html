@@ -3,54 +3,70 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вход для мастера • Василики</title>
+  <title>Вход мастера • Василики</title>
   <link rel="stylesheet" href="styles.css">
   <style>
-    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-    .login-card {
-      background: white; padding: 40px; border-radius: 32px; box-shadow: var(--shadow-hover);
-      max-width: 420px; width: 100%; text-align: center;
-    }
-    .login-card h1 { font-family: 'Playfair Display', serif; font-size: 2.8rem; color: var(--accent); margin-bottom: 16px; }
-    input { width: 100%; padding: 18px; margin: 12px 0; border: 2px solid var(--border); border-radius: 16px; font-size: 1.1rem; }
-    button { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 50px; font-weight: 600; font-size: 1.2rem; cursor: pointer; margin-top: 20px; }
-    button:hover { background: var(--accent-hover); transform: translateY(-3px); }
-    .error { color: var(--error); margin-top: 16px; font-weight: 600; }
+    body { background:var(--bg); display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+    .login-box { background:var(--card); padding:48px; border-radius:32px; box-shadow:var(--shadow-hover); max-width:420px; width:100%; text-align:center; }
+    h1 { font-family:'Playfair Display',serif; font-size:2.8rem; color:var(--accent); margin-bottom:16px; }
+    input { width:100%; padding:18px; margin:12px 0; border:2px solid var(--border); border-radius:20px; font-size:1.1rem; background:var(--bg); }
+    button { width:100%; padding:18px; background:var(--accent); color:white; border:none; border-radius:50px; font-weight:600; font-size:1.2rem; cursor:pointer; margin-top:20px; transition:0.3s; }
+    button:hover { background:var(--accent-hover); transform:translateY(-2px); }
+    .error { color:var(--error); margin-top:16px; font-weight:600; }
   </style>
 </head>
 <body>
-  <div class="login-card">
+  <div class="login-box">
     <h1>Вход мастера</h1>
-    <p>Введи email из админки</p>
+    <p style="color:var(--text-light);margin-bottom:24px;">Введи свой email из админки</p>
     <input type="email" id="email" placeholder="master@vasiliki.ru" autocomplete="off">
-    <button onclick="loginMaster()">Войти как мастер</button>
+    <button onclick="loginMaster()">Войти</button>
     <div class="error" id="error"></div>
   </div>
 
   <script type="module">
-    import { db } from "./src/firebase.js";
-    import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    import { db } from "./firebase-config.js";
+    import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     window.loginMaster = async () => {
       const email = document.getElementById("email").value.trim().toLowerCase();
       const errorEl = document.getElementById("error");
-      if (!email) return errorEl.textContent = "Введи email, сука";
+      errorEl.textContent = "";
 
-      const q = query(collection(db, "masters"), where("email", "==", email), where("active", "==", true));
-      const snap = await getDocs(q);
-
-      if (snap.empty) {
-        errorEl.textContent = "Ты кто такой? Давай, до свидания.";
+      if (!email) {
+        errorEl.textContent = "Введи email, сука";
         return;
       }
 
-      const master = snap.docs[0].data();
-      localStorage.setItem("masterAuth", JSON.stringify({ id: snap.docs[0].id, ...master }));
-      location.href = "master-dashboard.html";
+      try {
+        const q = query(
+          collection(db, "masters"),
+          where("email", "==", email),
+          where("active", "==", true)
+        );
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          errorEl.textContent = "Ты кто такой? Давай, до свидания.";
+          return;
+        }
+
+        const masterDoc = snap.docs[0];
+        const master = { id: masterDoc.id, ...masterDoc.data() };
+
+        localStorage.setItem("masterAuth", JSON.stringify(master));
+        location.href = "admin.html";  // ← ТОЧНО ПЕРЕХОДИТ!
+
+      } catch (err) {
+        console.error(err);
+        errorEl.textContent = "Ошибка сети. Попробуй ещё раз.";
+      }
     };
 
-    // Enter → вход
-    document.getElementById("email").addEventListener("keypress", e => e.key === "Enter" && loginMaster());
+    // Ввод по Enter
+    document.getElementById("email").addEventListener("keypress", e => {
+      if (e.key === "Enter") loginMaster();
+    });
   </script>
 </body>
 </html>
