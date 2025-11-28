@@ -33,7 +33,9 @@ const allowedHosts = [
   "127.0.0.1",
   "calendar-666-5744f.web.app",
   "calendar-666-5744f.firebaseapp.com",
-  "https://sentech-666.github.io/salon/"
+  "https://sentech-666.github.io/salon/",
+  "https://sentech-666.github.io"
+ 
 ];
 
 if (!allowedHosts.includes(location.hostname)) {
