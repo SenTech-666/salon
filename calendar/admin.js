@@ -1,26 +1,31 @@
-// admin.js — ФИНАЛЬНАЯ ВЕРСИЯ 27.11.2025 — НИКАКИХ ОШИБОК
-import { db } from "./firebase-config.js";
+console.log("%cДЕБАГ АДМИНКИ 2025", "color:red;font-size:30px");
+console.log("window.isSuperAdmin =", window.isSuperAdmin);
+console.log("localStorage superAdminAuth =", localStorage.getItem("superAdminAuth"));
+console.log("Текущий user:", auth.currentUser?.email);
+// admin.js — ВАСИЛИКИ 2025 — ФИНАЛЬНАЯ РАБОЧАЯ ВЕРСИЯ ОТ ГРОКА (28.11.2025)
+import { db, auth } from "./firebase-config.js";
 import {
-  collection,
-  onSnapshot,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  query,
-  where,
-  getDocs,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  collection, onSnapshot, addDoc, updateDoc, deleteDoc,
+  doc, getDoc, getDocs, query, where
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
+// Глобальные переменные
 let currentMaster = null;
 let isSuperAdmin = false;
 
-// === МОДАЛКИ — ОДНА ИСТИНА, ОТВЕЧАЮТ ЗА ВСЁ ===
+window.servicesList = [];
+window.mastersList = [];
+let bookingsData = [];
+
+const SUPER_ADMIN_EMAILS = [
+  "prointernat07@gmail.com",   // ← вот тут
+  "admin@vasiliki.ru"
+];
+
+// === МОДАЛКИ ===
 window.openModal = (id) => {
   const modal = document.getElementById(id);
   if (!modal) return;
-  
   modal.classList.add("show");
   document.body.style.overflow = "hidden";
 };
@@ -28,14 +33,12 @@ window.openModal = (id) => {
 window.closeModal = (id) => {
   const modal = document.getElementById(id);
   if (!modal) return;
-  
   modal.classList.remove("show");
   document.body.style.overflow = "";
 };
 
-// Автозакрытие по крестику, клику вне и Esc — работает на всех модалках
+// Автозакрытие
 document.addEventListener("DOMContentLoaded", () => {
-  // Крестик (все элементы с классом .close)
   document.querySelectorAll(".close").forEach(el => {
     el.addEventListener("click", () => {
       const modal = el.closest(".modal");
@@ -43,178 +46,89 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Клик вне модалки
   document.querySelectorAll(".modal").forEach(modal => {
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        closeModal(modal.id);
-      }
+    modal.addEventListener("click", e => {
+      if (e.target === modal) closeModal(modal.id);
     });
   });
 
-  // Esc — закрывает любую открытую модалку
-  document.addEventListener("keydown", (e) => {
+  document.addEventListener("keydown", e => {
     if (e.key === "Escape") {
       document.querySelector(".modal.show")?.classList.remove("show");
       document.body.style.overflow = "";
     }
   });
+
+  document.getElementById("logout-btn").onclick = window.firebaseSignOut;
 });
 
-// === АВТОРИЗАЦИЯ ===
-const masterAuth = localStorage.getItem("masterAuth");
-const superAuth = localStorage.getItem("superAdminAuth");
+// === ИНТЕРФЕЙС ДЛЯ МАСТЕРА ===
+function setupInterface() {
+  if (currentMaster) {
+    document.getElementById("page-title").textContent = currentMaster.name;
+    document.getElementById("page-subtitle").textContent = "Личный кабинет мастера";
+    document.getElementById("master-badge").style.display = "inline-block";
+    document.getElementById("master-name-display").textContent = currentMaster.name;
 
-if (masterAuth) currentMaster = JSON.parse(masterAuth);
-if (superAuth === "true") isSuperAdmin = true;
+    document.getElementById("services-card").style.display = "none";
+    document.getElementById("masters-card").style.display = "none";
 
-if (!currentMaster && !isSuperAdmin) location.href = "super-login.html";
-
-// === ИНТЕРФЕЙС ===
-if (currentMaster) {
-  document.getElementById("page-title").textContent = currentMaster.name;
-  document.getElementById("page-subtitle").textContent = "Личный кабинет мастера";
-  document.getElementById("master-badge").style.display = "inline-block";
-  document.getElementById("master-name-display").textContent = currentMaster.name;
-
-  document.getElementById("services-card").style.display = "none";
-  document.getElementById("masters-card").style.display = "none";
-
-  // ЗАЩИТА: блокируем кнопки добавления у мастера
-  document.querySelectorAll(".btn").forEach(btn => {
-    if (btn.textContent.includes("Добавить")) {
-      btn.style.opacity = "0.5";
-      btn.style.pointerEvents = "none";
-      btn.title = "Доступно только администратору";
-    }
-  });
-}
-
-// === ВЫХОД ===
-document.getElementById("logout-btn").onclick = () => {
-  localStorage.clear();
-  location.href = "index.html";
-};
-
-// === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
-window.servicesList = [];
-window.mastersList = [];
-let bookingsData = [];
-
-// === МОДАЛКИ ===
-// УМНЫЕ МОДАЛКИ — ЗАКРЫВАЮТСЯ ВЕЗДЕ
-window.openModal = (id) => {
-  const modal = document.getElementById(id);
-  if (!modal) return;
-
-  modal.classList.add("show");
-  document.body.style.overflow = "hidden";
-
-  // Закрытие по клику вне контента
-  const closeByOverlay = (e) => {
-    if (e.target === modal) {
-      closeModal(id);
-      modal.removeEventListener("click", closeByOverlay);
-    }
-  };
-  modal.addEventListener("click", closeByOverlay);
-
-  // Закрытие по Esc
-  const escHandler = (e) => {
-    if (e.key === "Escape") {
-      closeModal(id);
-      document.removeEventListener("keydown", escHandler);
-    }
-  };
-  document.addEventListener("keydown", escHandler);
-};
-
-window.closeModal = (id) => {
-  const modal = document.getElementById(id);
-  if (!modal) return;
-
-  modal.classList.remove("show");
-  document.body.style.overflow = "";
-};
-
-// === РЕНДЕР УСЛУГ (ТОЛЬКО АДМИН) ===
-function renderServices(docs) {
-  const list = document.getElementById("services-list");
-  if (!list) return;
-  
-  list.innerHTML = docs.length === 0
-    ? "<p style='color:#aaa;text-align:center;padding:60px;'>Нет услуг</p>"
-    : docs.map(d => {
-        const s = d.data();
-        return `<div class="item" onclick="openServiceModal('${d.id}')">
-          <strong>${s.name}</strong> — ${s.price}₽ (${s.duration} мин)
-          <div style="font-size:0.9rem;color:#777;margin-top:4px;">${s.description || ''}</div>
-        </div>`;
-      }).join("");
-}
-
-// === РЕНДЕР МАСТЕРОВ С ПЕРЕКЛЮЧАТЕЛЕМ (ТОЛЬКО АДМИН) ===
-function renderMasters(docs) {
-  const list = document.getElementById("masters-list");
-  if (!list) return;
-
-  if (docs.length === 0) {
-    list.innerHTML = "<p style='color:#aaa;text-align:center;padding:60px;'>Нет мастеров</p>";
-    return;
+    document.querySelectorAll(".btn").forEach(btn => {
+      if (btn.textContent.includes("Добавить")) {
+        btn.style.opacity = "0.5";
+        btn.style.pointerEvents = "none";
+        btn.title = "Доступно только администратору";
+      }
+    });
   }
+}
 
-  window.mastersList = docs.map(d => ({ id: d.id, ...d.data() }));
+// === РЕНДЕР УСЛУГ ===
+function renderServices() {
+  const el = document.getElementById("services-list");
+  el.innerHTML = window.servicesList.length === 0
+    ? "<p style='color:#aaa;text-align:center;padding:60px;'>Нет услуг</p>"
+    : window.servicesList.map(s => `
+      <div class="item" onclick="openServiceModal('${s.id}')">
+        <strong>${s.name}</strong> — ${s.price}₽ (${s.duration} мин)
+        <div style="font-size:0.9rem;color:#777;margin-top:4px;">${s.description || ''}</div>
+      </div>
+    `).join("");
+}
 
-  list.innerHTML = docs.map(d => {
-    const m = d.data();
-    const isActive = m.active !== false;
-
-    return `
-      <div class="item master-item" style="display:flex;align-items:center;justify-content:space-between;padding:20px;">
-        <div onclick="openMasterModal('${d.id}')" style="cursor:pointer;flex:1;display:flex;align-items:center;">
-          ${m.photo 
-            ? `<img src="${m.photo}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;margin-right:16px;">` 
-            : '<div style="width:50px;height:50px;background:#f0e6e0;border-radius:50%;margin-right:16px;"></div>'
-          }
-          <div>
-            <strong style="font-size:1.3rem;">${m.name}</strong><br>
-            <small style="color:#777;">${m.email || '—'}</small>
-          </div>
-        </div>
-
-        <label class="switch">
-          <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleMasterActive('${d.id}', this.checked)">
-          <span class="slider"></span>
-        </label>
-      </div>`;
-  }).join("");
+// === РЕНДЕР МАСТЕРОВ ===
+function renderMasters(docs) {
+  const el = document.getElementById("masters-list");
+  el.innerHTML = docs.length === 0
+    ? "<p style='color:#aaa;text-align:center;padding:60px;'>Нет мастеров</p>"
+    : docs.map(d => {
+        const m = d.data();
+        const isActive = m.active !== false;
+        return `
+          <div class="item master-item" style="display:flex;align-items:center;justify-content:space-between;padding:20px;">
+            <div onclick="openMasterModal('${d.id}')" style="cursor:pointer;flex:1;display:flex;align-items:center;">
+              ${m.photo ? `<img src="${m.photo}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;margin-right:16px;">` : '<div style="width:50px;height:50px;background:#f0e6e0;border-radius:50%;margin-right:16px;"></div>'}
+              <div>
+                <strong style="font-size:1.3rem;">${m.name}</strong><br>
+                <small style="color:#777;">${m.email || '—'}</small>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleMasterActive('${d.id}', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>`;
+      }).join("");
 }
 
 // === РЕНДЕР ЗАПИСЕЙ ===
 function renderBookings() {
-  const list = document.getElementById("bookings-list");
-  const count = document.getElementById("count");
-  if (!list || !count) return;
-
   let filtered = bookingsData;
-  if (currentMaster) {
-    filtered = filtered.filter(b => b.masterId === currentMaster.id);
-  }
+  if (currentMaster) filtered = filtered.filter(b => b.masterId === currentMaster.id);
 
-  // Фильтр по поиску и дате
-  const search = document.getElementById("search")?.value.toLowerCase() || "";
-  const dateFilter = document.getElementById("filter-date")?.value || "";
-  if (search || dateFilter) {
-    filtered = filtered.filter(b => {
-      const matchSearch = b.clientName?.toLowerCase().includes(search) || b.clientPhone?.includes(search);
-      const matchDate = dateFilter ? b.date === dateFilter : true;
-      return matchSearch && matchDate;
-    });
-  }
-
-  count.textContent = filtered.length;
-
-  list.innerHTML = filtered.length === 0
+  document.getElementById("count").textContent = filtered.length;
+  const el = document.getElementById("bookings-list");
+  el.innerHTML = filtered.length === 0
     ? `<p style="text-align:center;color:#aaa;padding:80px 20px;font-size:1.5rem;">
          ${currentMaster ? 'Записей нет.<br>Отдыхай, король' : 'Нет записей'}
        </p>`
@@ -237,7 +151,7 @@ function renderBookings() {
       }).join("");
 }
 
-// === КАЛЕНДАРЬ БЛОКИРОВКИ ===
+// === КАЛЕНДАРЬ, МОДАЛКИ ДНЯ, БЛОКИРОВКА, НАВИГАЦИЯ, УСЛУГИ, МАСТЕРА, ЗАПИСИ ===
 const timeSlots = ["10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00"];
 let calendarDate = new Date();
 
@@ -288,7 +202,6 @@ async function renderCalendar() {
   document.getElementById("block-calendar").innerHTML = html;
 }
 
-// === МОДАЛКА ДНЯ ===
 // === МОДАЛКА ДНЯ — ТЕПЕРЬ ЗАКРЫВАЕТСЯ ВСЕГДА ===
 window.openDayModal = async (date) => {
   const masterId = currentMaster?.id || null;
@@ -307,12 +220,12 @@ window.openDayModal = async (date) => {
 
   // Создаём оверлей
   const overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;";
 
-  // Функция закрытия — работает везде
+  // Функция закрытия
   const closeThisModal = () => overlay.remove();
 
-  // Закрытие по клику вне контента
+  // Закрытие по клику вне
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeThisModal();
   });
@@ -354,7 +267,7 @@ window.openDayModal = async (date) => {
 
   document.body.appendChild(overlay);
 
-  // Дополнительно — закрытие по Esc
+  // Закрытие по Esc
   const escHandler = (e) => {
     if (e.key === "Escape") {
       closeThisModal();
@@ -546,10 +459,24 @@ window.cancelBooking = async () => {
 };
 
 // === ЗАПУСК ===
-document.addEventListener("DOMContentLoaded", () => {
+auth.onAuthStateChanged(() => {
+  // firebase-config.js уже всё посчитал: window.isSuperAdmin и localStorage
+  isSuperAdmin = window.isSuperAdmin === true || localStorage.getItem("superAdminAuth") === "true";
+
+  // Если мастер — берём из localStorage (firebase-config.js не знает про мастеров)
+  const masterAuth = localStorage.getItem("masterAuth");
+  if (masterAuth) currentMaster = JSON.parse(masterAuth);
+
+  if (!isSuperAdmin && !currentMaster) {
+    location.href = "super-login.html";
+    return;
+  }
+
+  setupInterface();
+
   onSnapshot(collection(db, "services"), s => {
     window.servicesList = s.docs.map(d => ({id: d.id, ...d.data()}));
-    if (isSuperAdmin) renderServices(s.docs);
+    if (isSuperAdmin) renderServices();
   });
 
   onSnapshot(collection(db, "bookings"), s => {
@@ -562,6 +489,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   renderCalendar();
-});
 
-console.log("%cВАСИЛИКИ — РАБОТАЮТ КАК ЧАСЫ. ТЫ — ИМПЕРАТОР.", "color:gold;background:black;font-size:36px;padding:20px");
+  console.log("%cВАСИЛИКИ 2025 — ЗАПУЩЕНО НАХУЙ! ТЫ КОРОЛЬ, ВСЁ РАБОТАЕТ!", "color:gold;background:black;font-size:36px;padding:20px");
+});

@@ -14,7 +14,10 @@
     input { width:100%; padding:16px; margin:12px 0; border:2px solid var(--border); border-radius:16px; font-size:1.1rem; }
     button { width:100%; padding:18px; background:var(--accent); color:white; border:none; border-radius:50px; font-weight:600; font-size:1.2rem; cursor:pointer; margin-top:20px; }
     button:hover { background:var(--accent-hover); transform:translateY(-3px); }
-    .error { color:var(--error); margin-top:16px; font-weight:600; }
+    button:disabled { background:#aaa; cursor:not-allowed; transform:none; }
+    .error { color:var(--error); margin-top:16px; font-weight:600; min-height:24px; }
+    .loader { display:inline-block; width:20px; height:20px; border:3px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin-right:10px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -22,29 +25,82 @@
     <h1>Администратор</h1>
     <p>Вход в полную админку</p>
     
-    <input type="email" id="email" placeholder="Email" value="admin@vasiliki.ru">
-    <input type="password" id="password" placeholder="Пароль">
+    <input type="email" id="email" placeholder="Email" value="admin@vasiliki.ru" required>
+    <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
     
-    <button onclick="loginSuper()">Войти</button>
+    <button id="loginBtn" onclick="loginSuper()">
+      <span id="btnText">Войти</span>
+      <span id="loader" class="loader" style="display:none;"></span>
+    </button>
+    
     <div class="error" id="error"></div>
   </div>
 
-  <script>
-    // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-    // МЕНЯЙ ТОЛЬКО ЗДЕСЬ — ТВОИ ДАННЫЕ
-    const SUPER_EMAIL = "admin@vasiliki.ru";
-    const SUPER_PASS  = "123";   // ← поменяй на свой пароль
-    // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+  <!-- Firebase SDK (только Auth) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    window.loginSuper = () => {
-      const email = document.getElementById("email").value.trim();
-      const pass  = document.getElementById("password").value;
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr08aVXswvpjwwLvtSbpBnPhE8dv3HWdM",
+      authDomain: "calendar-666-5744f.firebaseapp.com",
+      projectId: "calendar-666-5744f",
+      storageBucket: "calendar-666-5744f.appspot.com",
+      messagingSenderId: "665606748855",
+      appId: "1:665606748855:web:5e4a2865b1f26494cf2b32"
+    };
 
-      if (email === SUPER_EMAIL && pass === SUPER_PASS) {
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Если уже залогинен как супер-админ — сразу кидаем в админку
+    onAuthStateChanged(auth, (user) => {
+      if (user && user.email === "admin@vasiliki.ru") {
         localStorage.setItem("superAdminAuth", "true");
         location.href = "admin.html";
-      } else {
-        document.getElementById("error").textContent = "Неправильный email или пароль, милорд";
+      }
+    });
+
+    window.loginSuper = async () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const errorEl = document.getElementById("error");
+      const btn = document.getElementById("loginBtn");
+      const btnText = document.getElementById("btnText");
+      const loader = document.getElementById("loader");
+
+      errorEl.textContent = "";
+      btn.disabled = true;
+      btnText.style.display = "none";
+      loader.style.display = "inline-block";
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Дополнительная проверка — только этот email может быть супер-админом
+      
+
+        // Всё ок — ставим флаг и летим в админку
+        localStorage.setItem("superAdminAuth", "true");
+        location.href = "admin.html";
+
+      } catch (error) {
+        let msg = "Неправильный логин или пароль, милорд";
+
+        if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+          msg = "Неправильный email или пароль";
+        } else if (error.code === "auth/too-many-requests") {
+          msg = "Слишком много попыток. Подожди пару минут, хулиган";
+        } else if (error.message.includes("Доступ запрещён")) {
+          msg = error.message;
+        }
+
+        errorEl.textContent = msg;
+      } finally {
+        btn.disabled = false;
+        btnText.style.display = "inline";
+        loader.style.display = "none";
       }
     };
 

@@ -7,64 +7,134 @@
   <link rel="stylesheet" href="styles.css">
   <style>
     body { background:var(--bg); display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
-    .login-box { background:var(--card); padding:48px; border-radius:32px; box-shadow:var(--shadow-hover); max-width:420px; width:100%; text-align:center; }
-    h1 { font-family:'Playfair Display',serif; font-size:2.8rem; color:var(--accent); margin-bottom:16px; }
-    input { width:100%; padding:18px; margin:12px 0; border:2px solid var(--border); border-radius:20px; font-size:1.1rem; background:var(--bg); }
-    button { width:100%; padding:18px; background:var(--accent); color:white; border:none; border-radius:50px; font-weight:600; font-size:1.2rem; cursor:pointer; margin-top:20px; transition:0.3s; }
-    button:hover { background:var(--accent-hover); transform:translateY(-2px); }
-    .error { color:var(--error); margin-top:16px; font-weight:600; }
+    .login-box { background:var(card); padding:48px; border-radius:32px; box-shadow:var(shadow-hover); max-width:420px; width:100%; text-align:center; }
+    h1 { font-family:'Playfair Display',serif; font-size:2.8rem; color:var(accent); margin-bottom:16px; }
+    input { width:100%; padding:18px; margin:12px 0; border:2px solid var(border); border-radius:20px; font-size:1.1rem; background:var(bg); }
+    button { width:100%; padding:18px; background:var(accent); color:white; border:none; border-radius:50px; font-weight:600; font-size:1.2rem; cursor:pointer; margin-top:20px; transition:0.3s; }
+    button:hover { background:var(accent-hover); transform:translateY(-2px); }
+    button:disabled { background:#aaa; cursor:not-allowed; transform:none; }
+    .error { color:var(error); margin-top:16px; font-weight:600; min-height:24px; }
+    .loader { display:inline-block; width:20px; height:20px; border:3px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin-right:10px; vertical-align:-2px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="login-box">
     <h1>Вход мастера</h1>
-    <p style="color:var(--text-light);margin-bottom:24px;">Введи свой email из админки</p>
-    <input type="email" id="email" placeholder="master@vasiliki.ru" autocomplete="off">
-    <button onclick="loginMaster()">Войти</button>
+    <p style="color:var(text-light);margin-bottom:24px;">Введи email и пароль из админки</p>
+
+    <input type="email" id="email" placeholder="master@vasiliki.ru" autocomplete="username" required>
+    <input type="password" id="password" placeholder="Пароль" autocomplete="current-password" required>
+
+    <button id="loginBtn">
+      <span id="btnText">Войти</span>
+      <span id="loader" class="loader" style="display:none;"></span>
+    </button>
+
     <div class="error" id="error"></div>
   </div>
 
+  <!-- Firebase Auth + Firestore -->
   <script type="module">
-    import { db } from "./firebase-config.js";
-    import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr08aVXswvpjwwLvtSbpBnPhE8dv3HWdM",
+      authDomain: "calendar-666-5744f.firebaseapp.com",
+      projectId: "calendar-666-5744f",
+      storageBucket: "calendar-666-5744f.appspot.com",
+      messagingSenderId: "665606748855",
+      appId: "1:665606748855:web:5e4a2865b1f26494cf2b32"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Если мастер уже залогинен — сразу в админку
+    onAuthStateChanged(auth, async (user) => {
+      if (user && user.email && user.email !== "admin@vasiliki.ru") {
+        const masterRef = doc(db, "masters", user.uid);
+        const masterSnap = await getDoc(masterRef);
+        if (masterSnap.exists() && masterSnap.data().active !== false) {
+          localStorage.setItem("masterAuth", JSON.stringify({ id: user.uid, ...masterSnap.data() }));
+          location.href = "admin.html";
+        }
+      }
+    });
 
     window.loginMaster = async () => {
-      const email = document.getElementById("email").value.trim().toLowerCase();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
       const errorEl = document.getElementById("error");
-      errorEl.textContent = "";
+      const btn = document.getElementById("loginBtn");
+      const btnText = document.getElementById("btnText");
+      const loader = document.getElementById("loader");
 
-      if (!email) {
-        errorEl.textContent = "Введи email, сука";
+      errorEl.textContent = "";
+      btn.disabled = true;
+      btnText.style.display = "none";
+      loader.style.display = "inline-block";
+
+      if (!email || !password) {
+        errorEl.textContent = "Заполни все поля, красавчик";
+        btn.disabled = false;
+        btnText.style.display = "inline";
+        loader.style.display = "none";
         return;
       }
 
       try {
-        const q = query(
-          collection(db, "masters"),
-          where("email", "==", email),
-          where("active", "==", true)
-        );
-        const snap = await getDocs(q);
+        // 1. Логинимся через Firebase Auth
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-        if (snap.empty) {
-          errorEl.textContent = "Ты кто такой? Давай, до свидания.";
-          return;
+        // 2. Проверяем, что такой мастер вообще существует и активен
+        const masterRef = doc(db, "masters", user.uid);
+        const masterSnap = await getDoc(masterRef);
+
+        if (!masterSnap.exists()) {
+          await auth.signOut();
+          throw new Error("Мастер не найден в базе");
         }
 
-        const masterDoc = snap.docs[0];
-        const master = { id: masterDoc.id, ...masterDoc.data() };
+        const masterData = masterSnap.data();
+        if (masterData.active === false) {
+          await auth.signOut();
+          throw new Error("Аккаунт мастера деактивирован");
+        }
 
-        localStorage.setItem("masterAuth", JSON.stringify(master));
-        location.href = "admin.html";  // ← ТОЧНО ПЕРЕХОДИТ!
+        // 3. Всё ок — сохраняем в localStorage для совместимости со старым кодом
+        localStorage.setItem("masterAuth", JSON.stringify({
+          id: user.uid,
+          ...masterData
+        }));
+
+        location.href = "admin.html";
 
       } catch (err) {
-        console.error(err);
-        errorEl.textContent = "Ошибка сети. Попробуй ещё раз.";
+        let msg = "Неправильный email или пароль";
+
+        if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+          msg = "Неправильный email или пароль";
+        } else if (err.code === "auth/too-many-requests") {
+          msg = "Слишком много попыток. Подожди пару минут";
+        } else if (err.message) {
+          msg = err.message;
+        }
+
+        errorEl.textContent = msg;
+      } finally {
+        btn.disabled = false;
+        btnText.style.display = "inline";
+        loader.style.display = "none";
       }
     };
 
-    // Ввод по Enter
-    document.getElementById("email").addEventListener("keypress", e => {
+    // Enter → вход
+    document.addEventListener("keydown", e => {
       if (e.key === "Enter") loginMaster();
     });
   </script>
