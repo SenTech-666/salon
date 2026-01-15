@@ -1,4 +1,5 @@
 // src/toast.js — ТОАСТЫ, КОТОРЫЕ ЕБУТ МОЗГ КРАСОТОЙ
+
 export const toast = (message, type = "info", duration = 3200) => {
   console.log(`%c🍞 ТОСТ: ${message}`, `color: ${type === 'error' ? '#ff5252' : '#4caf50'}; font-weight: bold;`);
 

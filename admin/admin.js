@@ -1,13 +1,16 @@
-console.log("%cДЕБАГ АДМИНКИ 2025", "color:red;font-size:30px");
+console.log("%cДЕБАГ АДМИНКИ 2026 — ПОЛНЫЙ КОМПЛЕКТ, СУКА!", "color:red;font-size:30px");
 console.log("window.isSuperAdmin =", window.isSuperAdmin);
 console.log("localStorage superAdminAuth =", localStorage.getItem("superAdminAuth"));
 console.log("Текущий user:", auth.currentUser?.email);
-// admin.js — ВАСИЛИКИ 2025 — ФИНАЛЬНАЯ РАБОЧАЯ ВЕРСИЯ ОТ ГРОКА (28.11.2025)
+
+// admin.js — ВАСИЛИКИ 2026 — АДМИНКА С ФИЛЬТРАМИ И МАССОВЫМИ ДЕЙСТВИЯМИ (15.01.2026)
+
 import { db, auth } from "./firebase-config.js";
 import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc,
   doc, getDoc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
 
 // Глобальные переменные
 let currentMaster = null;
@@ -18,9 +21,11 @@ window.mastersList = [];
 let bookingsData = [];
 
 const SUPER_ADMIN_EMAILS = [
-  "prointernat07@gmail.com",   // ← вот тут
+  "prointernat07@gmail.com",
   "admin@vasiliki.ru"
 ];
+
+let selectedBookings = new Set(); // для массовых действий
 
 // === МОДАЛКИ ===
 window.openModal = (id) => {
@@ -37,7 +42,7 @@ window.closeModal = (id) => {
   document.body.style.overflow = "";
 };
 
-// Автозакрытие
+// Автозакрытие модалок
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".close").forEach(el => {
     el.addEventListener("click", () => {
@@ -83,6 +88,24 @@ function setupInterface() {
   }
 }
 
+// === ЗАПОЛНЕНИЕ ФИЛЬТРА МАСТЕРОВ ===
+function populateMasterFilter() {
+  const select = document.getElementById("filter-master");
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Все мастера</option>';
+
+  // Сортируем мастеров по имени для удобства
+  const sortedMasters = [...window.mastersList].sort((a, b) => a.name.localeCompare(b.name));
+
+  sortedMasters.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = m.name;
+    select.appendChild(opt);
+  });
+}
+
 // === РЕНДЕР УСЛУГ ===
 function renderServices() {
   const el = document.getElementById("services-list");
@@ -121,37 +144,114 @@ function renderMasters(docs) {
       }).join("");
 }
 
-// === РЕНДЕР ЗАПИСЕЙ ===
+// === РЕНДЕР ЗАПИСЕЙ (С ЧЕКБОКСАМИ, ФИЛЬТРАМИ И КРАСИВЫМ ВИДОМ) ===
 function renderBookings() {
+  const search = document.getElementById("search")?.value?.toLowerCase() || '';
+  const dateFilter = document.getElementById("filter-date")?.value || '';
+  const masterFilter = document.getElementById("filter-master")?.value || '';
+
   let filtered = bookingsData;
-  if (currentMaster) filtered = filtered.filter(b => b.masterId === currentMaster.id);
+
+  // Фильтр по поиску
+  if (search) {
+    filtered = filtered.filter(b =>
+      (b.clientName?.toLowerCase().includes(search) ||
+       b.clientPhone?.includes(search) ||
+       b.serviceName?.toLowerCase().includes(search))
+    );
+  }
+
+  // Фильтр по дате
+  if (dateFilter) {
+    filtered = filtered.filter(b => b.date === dateFilter);
+  }
+
+  // Фильтр по мастеру
+  if (masterFilter) {
+    filtered = filtered.filter(b => b.masterId === masterFilter);
+  } else if (currentMaster) {
+    // Если залогинен мастер — только его записи
+    filtered = filtered.filter(b => b.masterId === currentMaster.id);
+  }
 
   document.getElementById("count").textContent = filtered.length;
-  const el = document.getElementById("bookings-list");
-  el.innerHTML = filtered.length === 0
+
+  const list = document.getElementById("bookings-list");
+  list.innerHTML = filtered.length === 0
     ? `<p style="text-align:center;color:#aaa;padding:80px 20px;font-size:1.5rem;">
          ${currentMaster ? 'Записей нет.<br>Отдыхай, король' : 'Нет записей'}
        </p>`
     : filtered.map(b => {
         const service = window.servicesList.find(s => s.id === b.serviceId);
-        return `<div class="item" onclick="openBookingModal('${b.id}')">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <strong style="font-size:1.3rem;color:var(--accent);">${b.clientName || 'Клиент'}</strong>
-              ${b.clientPhone ? `<span style="margin-left:12px;color:#a67c52;">• ${b.clientPhone}</span>` : ''}
-              <br><br>
-              <div style="color:#777;">
-                ${new Date(b.date).toLocaleDateString('ru-RU', {weekday:'short', day:'numeric', month:'long'})} 
-                • ${b.time} • <strong>${service?.name || 'Услуга'}</strong>
+        const masterName = b.masterId 
+          ? window.mastersList.find(m => m.id === b.masterId)?.name || 'Общий график' 
+          : 'Общий график';
+
+        return `
+          <div class="item" style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid #eee;cursor:pointer;">
+            <input type="checkbox" 
+                   onchange="toggleBookingSelection('${b.id}', this.checked)" 
+                   style="width:20px;height:20px;">
+            <div onclick="openBookingModal('${b.id}')" style="flex:1;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong style="font-size:1.3rem;color:var(--accent);">${b.clientName || 'Клиент'}</strong>
+                <span style="color:#777;font-size:0.95rem;">${b.date} • ${b.time}</span>
+              </div>
+              <div style="margin-top:6px;color:#555;">
+                ${b.clientPhone ? `<span style="color:#a67c52;">${b.clientPhone}</span> • ` : ''}
+                ${service?.name || 'Услуга'} (${service?.price || '?'}₽) • 
+                <span style="color:#777;">Мастер: ${masterName}</span>
               </div>
             </div>
-            <div style="font-size:2rem;color:var(--accent);opacity:0.7;">→</div>
-          </div>
-        </div>`;
+          </div>`;
       }).join("");
+
+  updateMassActionButtons();
 }
 
-// === КАЛЕНДАРЬ, МОДАЛКИ ДНЯ, БЛОКИРОВКА, НАВИГАЦИЯ, УСЛУГИ, МАСТЕРА, ЗАПИСИ ===
+function toggleBookingSelection(id, checked) {
+  if (checked) {
+    selectedBookings.add(id);
+  } else {
+    selectedBookings.delete(id);
+  }
+  updateMassActionButtons();
+}
+window.toggleBookingSelection = toggleBookingSelection;
+
+function updateMassActionButtons() {
+  const hasSelected = selectedBookings.size > 0;
+  const deleteBtn = document.getElementById("delete-selected");
+  const transferBtn = document.getElementById("transfer-selected");
+  if (deleteBtn) deleteBtn.disabled = !hasSelected;
+  if (transferBtn) transferBtn.disabled = !hasSelected;
+}
+
+// === МАССОВОЕ УДАЛЕНИЕ ===
+window.deleteSelectedBookings = async () => {
+  if (!selectedBookings.size) return;
+  if (!confirm(`Удалить ${selectedBookings.size} выбранных записей навсегда?`)) return;
+
+  try {
+    const promises = [...selectedBookings].map(id => deleteDoc(doc(db, "bookings", id)));
+    await Promise.all(promises);
+    selectedBookings.clear();
+    toast(`Удалено ${promises.length} записей!`, "success");
+  } catch (err) {
+    toast("Ошибка при массовом удалении", "error");
+    console.error(err);
+  }
+};
+
+// === МАССОВЫЙ ПЕРЕНОС (заглушка с планом на будущее) ===
+window.transferSelectedBookings = () => {
+  if (!selectedBookings.size) return;
+  alert(`Выбрано ${selectedBookings.size} записей для массового переноса.\n\nФункция в разработке — скоро добавим модалку с выбором новой даты и времени для всех сразу! 😏`);
+  // TODO: здесь потом открываем модалку с newDate и newTime
+  // и применяем updateDoc для каждой записи
+};
+
+// === КАЛЕНДАРЬ И ОСТАЛЬНОЕ (без изменений, но оставил для полноты) ===
 const timeSlots = ["10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00"];
 let calendarDate = new Date();
 
@@ -170,7 +270,6 @@ async function renderCalendar() {
   const start = `${year}-${String(month).padStart(2, "0")}-01`;
   const end = `${year}-${String(month).padStart(2, "0")}-31`;
 
-  // ВРЕМЕННЫЙ ФИКС БЕЗ ИНДЕКСА (пока Firebase создаёт индекс)
   const snap = await getDocs(collection(db, "blocked"));
   const allBlocked = snap.docs.map(d => d.data()).filter(b => 
     b.masterId === masterId && b.date >= start && b.date <= end
@@ -202,30 +301,25 @@ async function renderCalendar() {
   document.getElementById("block-calendar").innerHTML = html;
 }
 
-// === МОДАЛКА ДНЯ — ТЕПЕРЬ ЗАКРЫВАЕТСЯ ВСЕГДА ===
+// === МОДАЛКА ДНЯ ===
 window.openDayModal = async (date) => {
   const masterId = currentMaster?.id || null;
 
-  // Получаем записи
   const bookingsSnap = isSuperAdmin
     ? await getDocs(query(collection(db, "bookings"), where("date", "==", date)))
     : await getDocs(query(collection(db, "bookings"), where("date", "==", date), where("masterId", "==", masterId)));
 
   const bookings = bookingsSnap.docs.map(d => d.data());
 
-  // Получаем блокировки
   const blockedSnap = await getDocs(query(collection(db, "blocked"), where("date", "==", date), where("masterId", "==", masterId)));
   const blockedTimes = blockedSnap.docs.filter(d => !d.data().fullDay).map(d => d.data().time);
   const fullDayBlocked = blockedSnap.docs.some(d => d.data().fullDay);
 
-  // Создаём оверлей
   const overlay = document.createElement("div");
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;";
 
-  // Функция закрытия
   const closeThisModal = () => overlay.remove();
 
-  // Закрытие по клику вне
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeThisModal();
   });
@@ -235,7 +329,7 @@ window.openDayModal = async (date) => {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <h2 style="color:var(--accent);margin:0;">${date.replace(/-/g, '.')}</h2>
         <span onclick="this.closest('[style*=\'fixed\']')?.remove()" 
-              style="font-size:2.5rem;cursor:pointer;color:#aaa;">&times;</span>
+              style="font-size:2.5rem;cursor:pointer;color:#aaa;">×</span>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px;">
@@ -247,7 +341,7 @@ window.openDayModal = async (date) => {
                         background:${booked?'#ff9800':blocked?'#ff5252':'#f0e6e0'};
                         color:${booked||blocked?'white':'#333'};
                         cursor:${booked?'not-allowed':'pointer'};"
-                 ${!booked ? `onclick="toggleTimeBlock('${date}','${time}',this)"` : ''}>
+                 ${!booked ? `onclick="toggleTimeBlock('${date}','${time}',this)"` : ''}">
               ${time}${blocked?'<br><small>Заблокировано</small>':''}
             </div>`;
         }).join("")}
@@ -267,7 +361,6 @@ window.openDayModal = async (date) => {
 
   document.body.appendChild(overlay);
 
-  // Закрытие по Esc
   const escHandler = (e) => {
     if (e.key === "Escape") {
       closeThisModal();
@@ -290,7 +383,7 @@ window.toggleTimeBlock = async (date, time, el) => {
   } else {
     await addDoc(collection(db, "blocked"), { date, time, masterId, createdBy: currentMaster?"master":"admin" });
     el.style.background = "#ff5252";
-    el.innerHTML = time + " Заблокировано";
+    el.innerHTML = time + " <small>Заблокировано</small>";
   }
 };
 
@@ -318,7 +411,7 @@ document.getElementById("nextMonthBlock")?.addEventListener("click", () => {
   renderCalendar();
 });
 
-// === МОДАЛКИ УСЛУГ ===
+// === МОДАЛКИ УСЛУГ, МАСТЕРОВ, ЗАПИСИ (оставил без изменений) ===
 window.openServiceModal = (id = null) => {
   window.currentEditId = id;
   openModal("service-modal");
@@ -339,14 +432,12 @@ window.openServiceModal = (id = null) => {
   }
 };
 
-// === МОДАЛКА МАСТЕРА ===
 window.openMasterModal = async (id = null) => {
   window.currentEditMasterId = id;
   
   const modal = document.getElementById("master-modal");
   if (!modal) return;
 
-  // Очищаем форму
   document.getElementById("master-name").value = "";
   document.getElementById("master-email").value = "";
   document.getElementById("master-photo").value = "";
@@ -364,7 +455,6 @@ window.openMasterModal = async (id = null) => {
   openModal("master-modal");
 };
 
-// === СОХРАНЕНИЕ МАСТЕРА ===
 window.saveMaster = async () => {
   const name = document.getElementById("master-name").value.trim();
   const email = document.getElementById("master-email").value.trim();
@@ -382,23 +472,21 @@ window.saveMaster = async () => {
     }
     closeModal("master-modal");
   } catch (err) {
-    alert("Ошибка сохранения");
+    alert("Ошибка сохранения мастера");
     console.error(err);
   }
 };
 
-// === ВКЛ/ВЫКЛ МАСТЕРА ===
 window.toggleMasterActive = async (id, active) => {
   try {
     await updateDoc(doc(db, "masters", id), { active });
-    console.log(`Мастер ${active ? 'включён' : 'выключен'}`);
+    toast(`Мастер ${active ? 'включён' : 'выключен'}`, "success");
   } catch (err) {
-    alert("Ошибка при изменении статуса мастера");
+    toast("Ошибка изменения статуса", "error");
     console.error(err);
   }
 };
 
-// === МОДАЛКА ЗАПИСИ ===
 let currentBookingId = null;
 
 window.openBookingModal = (id) => {
@@ -418,7 +506,6 @@ window.openBookingModal = (id) => {
   openModal("booking-modal");
 };
 
-// === ПЕРЕНЕС ЗАПИСИ ===
 window.transferBooking = async () => {
   if (!currentBookingId) return;
 
@@ -426,33 +513,32 @@ window.transferBooking = async () => {
   const newTime = document.getElementById("new-booking-time").value;
 
   if (!newDate || !newTime) {
-    alert("Выбери новую дату и время!");
+    toast("Выберите новую дату и время!", "error");
     return;
   }
 
-  if (confirm("Перенести запись на " + newDate + " в " + newTime + "?")) {
+  if (confirm(`Перенести запись на ${newDate} в ${newTime}?`)) {
     try {
       await updateDoc(doc(db, "bookings", currentBookingId), { date: newDate, time: newTime });
-      alert("Запись успешно перенесена!");
+      toast("Запись успешно перенесена!", "success");
       closeModal("booking-modal");
     } catch (err) {
-      alert("Ошибка переноса");
+      toast("Ошибка переноса", "error");
       console.error(err);
     }
   }
 };
 
-// === ОТМЕНИТЬ ЗАПИСЬ ===
 window.cancelBooking = async () => {
   if (!currentBookingId) return;
 
   if (confirm("Точно отменить запись? Клиент получит уведомление.")) {
     try {
       await deleteDoc(doc(db, "bookings", currentBookingId));
-      alert("Запись отменена");
+      toast("Запись отменена!", "success");
       closeModal("booking-modal");
     } catch (err) {
-      alert("Ошибка отмены");
+      toast("Ошибка отмены", "error");
       console.error(err);
     }
   }
@@ -460,10 +546,8 @@ window.cancelBooking = async () => {
 
 // === ЗАПУСК ===
 auth.onAuthStateChanged(() => {
-  // firebase-config.js уже всё посчитал: window.isSuperAdmin и localStorage
   isSuperAdmin = window.isSuperAdmin === true || localStorage.getItem("superAdminAuth") === "true";
 
-  // Если мастер — берём из localStorage (firebase-config.js не знает про мастеров)
   const masterAuth = localStorage.getItem("masterAuth");
   if (masterAuth) currentMaster = JSON.parse(masterAuth);
 
@@ -479,16 +563,18 @@ auth.onAuthStateChanged(() => {
     if (isSuperAdmin) renderServices();
   });
 
+  onSnapshot(collection(db, "masters"), s => {
+    window.mastersList = s.docs.map(d => ({id: d.id, ...d.data()}));
+    populateMasterFilter(); // Заполняем фильтр мастеров
+    if (isSuperAdmin) renderMasters(s.docs);
+  });
+
   onSnapshot(collection(db, "bookings"), s => {
     bookingsData = s.docs.map(d => ({id: d.id, ...d.data()}));
     renderBookings();
   });
 
-  if (isSuperAdmin) {
-    onSnapshot(collection(db, "masters"), s => renderMasters(s.docs));
-  }
-
   renderCalendar();
 
-  console.log("%cВАСИЛИКИ 2025 — ЗАПУЩЕНО НАХУЙ! ТЫ КОРОЛЬ, ВСЁ РАБОТАЕТ!", "color:gold;background:black;font-size:36px;padding:20px");
+  console.log("%cАДМИНКА 2026 — ФИЛЬТРЫ, ЧЕКБОКСЫ И МАССОВЫЕ ДЕЙСТВИЯ НАХУЙ! ТЫ КОРОЛЬ, ГОСПОДИН!", "color:gold;background:black;font-size:36px;padding:20px");
 });

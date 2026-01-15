@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Админка • Василики</title>
+  <title>Админка • Онлайн-запись</title>
   <link rel="stylesheet" href="admin.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -15,7 +15,7 @@
 
 <div class="container">
   <header class="text-center mb-40">
-    <h1 id="page-title">Василики</h1>
+    <h1 id="page-title">Онлайн-запись</h1>
     <p id="page-subtitle" style="font-size:1.4rem;color:var(--text-light);">Админ-панель • Полный контроль</p>
     <div id="master-badge" style="display:none;margin-top:20px;background:var(--accent);color:white;padding:12px 32px;border-radius:50px;font-weight:600;font-size:1.2rem;">
       Мастер: <span id="master-name-display"></span>
@@ -39,10 +39,23 @@
   <!-- ЗАПИСИ -->
   <div class="card">
     <h2>Записи <span style="font-size:1rem;color:var(--text-light);font-weight:normal;">(всего: <span id="count">0</span>)</span></h2>
+    
+    <!-- ФИЛЬТРЫ И ПОИСК -->
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;">
-      <input type="text" class="input" id="search" placeholder="Поиск по имени или телефону..." oninput="renderBookings()">
+      <input type="text" class="input" id="search" placeholder="Поиск по имени, телефону или услуге..." oninput="renderBookings()">
       <input type="date" class="input" id="filter-date" onchange="renderBookings()">
+      <select id="filter-master" class="input" onchange="renderBookings()">
+        <option value="">Все мастера</option>
+      </select>
     </div>
+
+    <!-- КНОПКИ МАССОВЫХ ДЕЙСТВИЙ -->
+    <div style="margin:16px 0; display:flex; gap:16px; flex-wrap:wrap;">
+      <button class="btn btn-danger" id="delete-selected" onclick="deleteSelectedBookings()" disabled>Удалить выбранные</button>
+      <button class="btn" id="transfer-selected" onclick="transferSelectedBookings()" disabled>Перенести выбранные</button>
+    </div>
+
+    <!-- СПИСОК ЗАПИСЕЙ -->
     <div id="bookings-list" class="grid"></div>
   </div>
 
@@ -125,6 +138,7 @@
 </div>
 
 <script type="module" src="firebase-config.js"></script>
+<script type="module" src="./src/toast.js"></script>
 <script type="module" src="admin.js"></script>
 </body>
 </html>

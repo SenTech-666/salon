@@ -199,7 +199,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
   transform: scale(1.15);
 }
 
-/* Остальные стили (время, кнопки, инпуты) — оставь из прошлого сообщения */
+
 
 /* Инпуты и селект */
 .modal input, .modal select {
@@ -373,7 +373,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
   .calendar-wrapper { padding: 24px 16px; }
   .hero-title { font-size: 2.8rem; }
 }
-/* INDEX.HTML — ПОЛНЫЙ ЛЮКС 2025 */
+
 
 /* HERO с параллаксом и затемнением */
 .hero-parallax {
@@ -984,14 +984,14 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 }
 
 /* 7. Если хочешь ещё жирнее на совсем мелких экранах — раскомментируй */
-/*
+
 @media (max-width: 380px) {
   .time-slot {
     padding: 28px 16px !important;
     font-size: 1.35rem !important;
   }
 }
-*/
+
 /* === ПОЛНЫЙ И ОКОНЧАТЕЛЬНЫЙ ФИКС — ЧТОБЫ СЛОТЫ ВРЕМЕНИ НИКОГДА НЕ ВЫЛАЗИЛИ ЗА МОДАЛКУ === */
 .modal {
   padding: 40px 20px !important;   /* уменьшаем боковые отступы модалки */

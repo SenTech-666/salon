@@ -1,5 +1,5 @@
 // modal.js — ФИНАЛЬНАЯ ВЕРСИЯ С ПОЛНЫМ СОХРАНЕНИЕМ МАСТЕРА. ГОСПОДИН, ВСЁ ЛЕТИТ.
-import { db } from "./firebase-config.js";
+import { db } from "../admin/firebase-config.js";
 import { doc, addDoc, updateDoc, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let currentServiceId = null;
