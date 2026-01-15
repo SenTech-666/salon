@@ -35,6 +35,7 @@ const allowedHosts = [
   "calendar-666-5744f.firebaseapp.com",
   "https://sentech-666.github.io/salon/",
   "https://sentech-666.github.io"
+  "https://sentech-666.github.io/salon/admin/admin.html"
  
 ];
 
