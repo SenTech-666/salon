@@ -26,7 +26,7 @@ export { app };
 // ==================================================================
 // 1. ЖЁСТКАЯ ЗАЩИТА ДОМЕНА (теперь даже на GitHub Pages не заведётся)
 // ==================================================================
-const allowedHosts = [
+/*const allowedHosts = [
   "vasiliki.ru",
   "www.vasiliki.ru",
   "localhost",
@@ -37,7 +37,7 @@ const allowedHosts = [
   "https://sentech-666.github.io"
   "https://sentech-666.github.io/salon/admin/admin.html"
  
-];
+];*/
 
 if (!allowedHosts.includes(location.hostname)) {
   document.body.innerHTML = `
