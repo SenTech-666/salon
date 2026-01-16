@@ -28,6 +28,27 @@
     <button class="btn" onclick="openModal('service-modal')">+ Добавить услугу</button>
     <div id="services-list" class="grid mt-20"></div>
   </div>
+  <!-- Блок горизонта записи -->
+<div class="card" id="booking-horizon-card">
+  <h2>Горизонт записи</h2>
+  <p style="color: var(--text-light); margin-bottom: 24px;">
+    На сколько дней вперёд клиенты могут бронировать
+  </p>
+
+  <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+    <input type="number" id="maxBookingDaysAhead" class="input" 
+           min="7" max="365" step="1" placeholder="90" 
+           style="width: 140px;" />
+
+    <span style="font-size: 1.1rem;">дней вперёд</span>
+
+    <button class="btn" onclick="saveBookingHorizon()">Сохранить</button>
+  </div>
+
+  <div id="horizon-preview" style="margin-top: 16px; font-style: italic; color: var(--text-light);">
+    Сейчас открыта запись до: <span id="horizon-date">...</span>
+  </div>
+</div>
   
   <!-- МАСТЕРА -->
   <div class="card" id="masters-card">

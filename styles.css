@@ -546,10 +546,10 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
   to { opacity: 1; transform: translateY(0); }
 }
 
-.day.blocked-full { background:#ffe5e5; opacity:0.7; }
+.day.blocked-full { background:#fdfdfdc2; opacity:0.7; }
 .day.partial { background:#fff8e1; }
-.status.blocked { background:#ff6b6b; color:white; }
-.status.partial { background:#ffca28; color:#3c2f2f; }
+.status.blocked { color:rgb(0, 0, 0); }
+.status.partial {  color:#3c2f2f; }
 .status.your-booking { background:#c9a08a; color:white; }
 .time-slot.blocked { background:#ff5252 !important; color:white; cursor:not-allowed; }
 .time-slot.booked { background:#999 !important; color:white; cursor:not-allowed; }
@@ -1235,7 +1235,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
 /* На десктопе оставляем всё красиво и аккуратно */
 @media (min-width: 769px) {
   .day.own {
-    border: 3px solid #00e676 !important;
+    border: 3px solid #d1997b !important;
     background: linear-gradient(135deg, rgba(0,230,118,0.15), rgba(0,230,118,0.05)) !important;
   }
 
@@ -1245,7 +1245,7 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
   }
 }
 /* Оставь только это — минимализм рулит */
-.day.own { background: #00e676 !important; color: white !important; } /* твоя запись */
+.day.own { background: #eee8dfe5 !important; color: rgb(0, 0, 0) !important; } /* твоя запись */
 .day.partial { background: #d1997b !important; color: white !important; } /* чужие есть */
 .day.booked { background: #f44336 !important; color: white !important; } /* забито */
 .day.master-closed { background: #f51919d7 !important; color: white !important; } /* мастер закрыл, но "Запись" */
@@ -1275,4 +1275,29 @@ body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); 
   background: #fff0f0 !important;
   color: #999 !important;
   border: 2px dashed #ddd !important;
+}
+.day.empty {
+  visibility: hidden !important;     /* Прячет, но место занимает */
+  pointer-events: none !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.day.too-far {
+  background: #e0e0e0 !important;
+  opacity: 0.45 !important;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
+
+.day.too-far::after {
+  content: "×";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2.8rem;
+  color: #999;
+  opacity: 0.6;
 }

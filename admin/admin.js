@@ -1,3 +1,32 @@
+// admin.js — ВАСИЛИКИ 2026 — АДМИНКА С ФИЛЬТРАМИ И МАССОВЫМИ ДЕЙСТВИЯМИ (16.01.2026)
+
+import { db, auth } from "./firebase-config.js";
+import {
+  collection, onSnapshot, addDoc, updateDoc, deleteDoc,
+  doc, getDoc, getDocs, query, where,
+  writeBatch, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+import {
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+// Глобальные переменные
+let currentMaster = null;
+let isSuperAdmin = false;
+
+window.servicesList = [];
+window.mastersList = [];
+let bookingsData = [];
+
+const SUPER_ADMIN_EMAILS = [
+  "prointernat07@gmail.com",
+  "admin@vasiliki.ru"
+];
+
+let selectedBookings = new Set(); // для массовых действий
+
 // === ВСТРОЕННЫЙ ТОАСТ ДЛЯ АДМИНКИ — ЧТОБЫ НЕ ЕБАТЬСЯ С ИМПОРТАМИ ===
 const adminToast = (message, type = "info", duration = 4000) => {
   const toastEl = document.createElement("div");
@@ -44,31 +73,6 @@ console.log("%cДЕБАГ АДМИНКИ 2026 — ПОЛНЫЙ КОМПЛЕКТ,
 console.log("window.isSuperAdmin =", window.isSuperAdmin);
 console.log("localStorage superAdminAuth =", localStorage.getItem("superAdminAuth"));
 console.log("Текущий user:", auth.currentUser?.email);
-
-// admin.js — ВАСИЛИКИ 2026 — АДМИНКА С ФИЛЬТРАМИ И МАССОВЫМИ ДЕЙСТВИЯМИ (15.01.2026)
-
-import { db, auth } from "./firebase-config.js";
-import {
-  collection, onSnapshot, addDoc, updateDoc, deleteDoc,
-  doc, getDoc, getDocs, query, where,
-  writeBatch
-} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-
-
-// Глобальные переменные
-let currentMaster = null;
-let isSuperAdmin = false;
-
-window.servicesList = [];
-window.mastersList = [];
-let bookingsData = [];
-
-const SUPER_ADMIN_EMAILS = [
-  "prointernat07@gmail.com",
-  "admin@vasiliki.ru"
-];
-
-let selectedBookings = new Set(); // для массовых действий
 
 // === МОДАЛКИ ===
 window.openModal = (id) => {
@@ -211,23 +215,19 @@ window.saveService = async () => {
 
   try {
     if (window.currentEditServiceId) {
-      // Редактирование существующей услуги
       await updateDoc(doc(db, "services", window.currentEditServiceId), data);
       adminToast(`Услуга "${name}" обновлена, красота!`, "success");
     } else {
-      // Новая услуга
       await addDoc(collection(db, "services"), data);
       adminToast(`Новая услуга "${name}" добавлена, пиздец как круто!`, "success");
     }
 
-    // Очищаем форму и закрываем модалку
     document.getElementById("service-name").value = "";
     document.getElementById("service-price").value = "";
     document.getElementById("service-duration").value = "";
     document.getElementById("service-desc").value = "";
     closeModal("service-modal");
 
-    // Перерендер списка услуг
     renderServices();
   } catch (err) {
     console.error("Пиздец при сохранении услуги:", err);
@@ -268,7 +268,6 @@ function renderBookings() {
 
   let filtered = bookingsData;
 
-  // Фильтр по поиску
   if (search) {
     filtered = filtered.filter(b =>
       (b.clientName?.toLowerCase().includes(search) ||
@@ -277,16 +276,13 @@ function renderBookings() {
     );
   }
 
-  // Фильтр по дате
   if (dateFilter) {
     filtered = filtered.filter(b => b.date === dateFilter);
   }
 
-  // Фильтр по мастеру
   if (masterFilter) {
     filtered = filtered.filter(b => b.masterId === masterFilter);
   } else if (currentMaster) {
-    // Если залогинен мастер — только его записи
     filtered = filtered.filter(b => b.masterId === currentMaster.id);
   }
 
@@ -344,7 +340,6 @@ function updateMassActionButtons() {
 }
 
 // === МАССОВОЕ УДАЛЕНИЕ ===
-// Безопасный тост — не упадёт, даже если adminToast не загрузился
 const safeToast = (msg, type = 'info') => {
   if (window.adminToast && typeof window.adminToast === 'function') {
     if (type === 'success') window.adminToast.success?.(msg) || window.adminToast(msg, 'success');
@@ -393,15 +388,14 @@ window.deleteSelectedBookings = async () => {
     }
   }
 };
+
 // === МАССОВЫЙ ПЕРЕНОС (заглушка с планом на будущее) ===
 window.transferSelectedBookings = () => {
   if (!selectedBookings.size) return;
   alert(`Выбрано ${selectedBookings.size} записей для массового переноса.\n\nФункция в разработке — скоро добавим модалку с выбором новой даты и времени для всех сразу! 😏`);
-  // TODO: здесь потом открываем модалку с newDate и newTime
-  // и применяем updateDoc для каждой записи
 };
 
-// === КАЛЕНДАРЬ И ОСТАЛЬНОЕ (без изменений, но оставил для полноты) ===
+// === КАЛЕНДАРЬ ===
 const timeSlots = ["10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00"];
 let calendarDate = new Date();
 
@@ -448,28 +442,30 @@ async function renderCalendar() {
         ${day}${isFullBlocked ? '<br>Заблокировано' : ''}
       </div>`;
   }
-  document.getElementById("block-calendar").innerHTML = html;
-  // После html присвоения
-document.getElementById("block-calendar").onclick = (e) => {
-  const dayDiv = e.target.closest('div[onclick^="openDayModal"]');
-  if (dayDiv) {
-    const onclickStr = dayDiv.getAttribute('onclick');
-    const dateMatch = onclickStr.match(/openDayModal\('([^']+)'\)/);
-    if (dateMatch) {
-      openDayModal(dateMatch[1]);
-    }
+  const calendarEl = document.getElementById("block-calendar");
+  if (calendarEl) {
+    calendarEl.innerHTML = html;
+
+    calendarEl.onclick = (e) => {
+      const dayDiv = e.target.closest('div[onclick^="openDayModal"]');
+      if (dayDiv) {
+        const onclickStr = dayDiv.getAttribute('onclick');
+        const dateMatch = onclickStr.match(/openDayModal\('([^']+)'\)/);
+        if (dateMatch) {
+          openDayModal(dateMatch[1]);
+        }
+      }
+    };
   }
-};
 }
 
 // === МОДАЛКА ДНЯ ===
 window.openDayModal = async (date) => {
-  // Закрываем всё старое
   closeAllModals();
 
   const masterId = currentMaster?.id || null;
 
- const bookingsSnap = isSuperAdmin
+  const bookingsSnap = isSuperAdmin
     ? await getDocs(query(collection(db, "bookings"), where("date", "==", date)))
     : await getDocs(query(collection(db, "bookings"), where("date", "==", date), where("masterId", "==", masterId)));
 
@@ -480,7 +476,7 @@ window.openDayModal = async (date) => {
   const fullDayBlocked = blockedSnap.docs.some(d => d.data().fullDay);
 
   const overlay = document.createElement("div");
-  overlay.className = 'modal show'; // сразу show для анимации
+  overlay.className = 'modal show';
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:40px;opacity:1;";
 
   overlay.innerHTML = `
@@ -497,7 +493,7 @@ window.openDayModal = async (date) => {
                         background:${booked?'#ff9800':blocked?'#ff5252':'#f0e6e0'};
                         color:${booked||blocked?'white':'#333'};
                         cursor:${booked?'not-allowed':'pointer'};"
-                 ${!booked ? `onclick="toggleTimeBlock('${date}','${time}',this)"` : ''}">
+                 ${!booked ? `onclick="toggleTimeBlock('${date}','${time}',this)"` : ''}>
               ${time}${blocked?'<br><small>Заблокировано</small>':''}
             </div>`;
         }).join("")}
@@ -517,7 +513,6 @@ window.openDayModal = async (date) => {
   document.body.appendChild(overlay);
   document.body.style.overflow = "hidden";
 
-  // Слушатели
   overlay.querySelector('.close').onclick = closeAllModals;
   overlay.querySelector('.close-btn').onclick = closeAllModals;
   overlay.onclick = (e) => { if (e.target === overlay) closeAllModals(); };
@@ -554,11 +549,10 @@ window.toggleFullDay = async (date, currentlyBlocked) => {
     adminToast('День заблокирован — никто не запишется, отдыхай, король!', 'success');
   }
 
-  // Автозакрытие с задержкой, чтоб тост увидели + перерендер календаря
   setTimeout(() => {
     closeAllModals();
     renderCalendar();
-  }, 1200); // 1.2 секунды — оптимально
+  }, 1200);
 };
 
 // === НАВИГАЦИЯ КАЛЕНДАРЯ ===
@@ -571,9 +565,8 @@ document.getElementById("nextMonthBlock")?.addEventListener("click", () => {
   renderCalendar();
 });
 
-// === МОДАЛКИ УСЛУГ, МАСТЕРОВ, ЗАПИСИ (оставил без изменений) ===
+// === МОДАЛКИ УСЛУГ, МАСТЕРОВ, ЗАПИСИ ===
 window.openServiceModal = (id = null) => {
-  window.currentEditId = id;
   window.currentEditServiceId = id;
   openModal("service-modal");
   
@@ -705,6 +698,71 @@ window.cancelBooking = async () => {
   }
 };
 
+// === Сохранение горизонта записи ===
+let isSavingHorizon = false;
+
+window.saveBookingHorizon = async () => {
+  if (isSavingHorizon) {
+    console.log("Уже сохраняем, не дёргайся, сука");
+    return;
+  }
+
+  isSavingHorizon = true;
+
+  const daysInput = document.getElementById('maxBookingDaysAhead');
+  const value = parseInt(daysInput.value, 10);
+
+  if (isNaN(value) || value < 7 || value > 365) {
+    adminToast("Введи нормальное число от 7 до 365 дней, милорд", "error");
+    isSavingHorizon = false;
+    return;
+  }
+
+  try {
+    await updateDoc(doc(db, "settings", "main"), {
+      maxBookingDaysAhead: value,
+      updatedAt: serverTimestamp()
+    });
+
+    adminToast(`Горизонт записи установлен: ${value} дней`, "success");
+    
+    updateHorizonPreview();
+
+  } catch (err) {
+    console.error("Ошибка сохранения горизонта:", err);
+    adminToast("Не удалось сохранить, пиздец в Firebase", "error");
+  } finally {
+    isSavingHorizon = false;
+  }
+};
+
+// Показываем текущую дату горизонта (исправлено — берём из инпута)
+function updateHorizonPreview() {
+  const daysInput = document.getElementById('maxBookingDaysAhead');
+  if (!daysInput) return;
+
+  const days = parseInt(daysInput.value, 10) || 90;
+  const horizonDate = new Date();
+  horizonDate.setDate(horizonDate.getDate() + days);
+
+  const dateStr = horizonDate.toLocaleDateString('ru-RU', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  });
+
+  const preview = document.getElementById('horizon-date');
+  if (preview) preview.textContent = dateStr;
+}
+
+// При загрузке настроек — заполняем инпут и обновляем превью
+onSnapshot(doc(db, "settings", "main"), snap => {
+  const settings = snap.exists() ? snap.data() : {};
+  const input = document.getElementById('maxBookingDaysAhead');
+  if (input) {
+    input.value = settings.maxBookingDaysAhead || 90;
+    updateHorizonPreview();
+  }
+});
+
 // === ЗАПУСК ===
 auth.onAuthStateChanged(() => {
   isSuperAdmin = window.isSuperAdmin === true || localStorage.getItem("superAdminAuth") === "true";
@@ -726,7 +784,7 @@ auth.onAuthStateChanged(() => {
 
   onSnapshot(collection(db, "masters"), s => {
     window.mastersList = s.docs.map(d => ({id: d.id, ...d.data()}));
-    populateMasterFilter(); // Заполняем фильтр мастеров
+    populateMasterFilter();
     if (isSuperAdmin) renderMasters(s.docs);
   });
 
@@ -737,5 +795,5 @@ auth.onAuthStateChanged(() => {
 
   renderCalendar();
 
-  console.log("%cАДМИНКА 2026 — ФИЛЬТРЫ, ЧЕКБОКСЫ И МАССОВЫЕ ДЕЙСТВИЯ НАХУЙ! ТЫ КОРОЛЬ, ГОСПОДИН!", "color:gold;background:black;font-size:36px;padding:20px");
+  console.log("%cАДМИНКА 2026 — КАЛЕНДАРЬ ВЕРНУЛСЯ, ТОАСТЫ ЧИСТЫЕ, ВСЁ РАБОТАЕТ", "color:gold;background:black;font-size:36px;padding:20px");
 });
