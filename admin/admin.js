@@ -1,3 +1,45 @@
+// === ВСТРОЕННЫЙ ТОАСТ ДЛЯ АДМИНКИ — ЧТОБЫ НЕ ЕБАТЬСЯ С ИМПОРТАМИ ===
+const adminToast = (message, type = "info", duration = 4000) => {
+  const toastEl = document.createElement("div");
+  toastEl.textContent = message;
+  toastEl.style.position = "fixed";
+  toastEl.style.top = "24px";
+  toastEl.style.right = "24px";
+  toastEl.style.padding = "16px 24px";
+  toastEl.style.borderRadius = "12px";
+  toastEl.style.color = "white";
+  toastEl.style.fontWeight = "bold";
+  toastEl.style.fontSize = "1.1rem";
+  toastEl.style.zIndex = "99999";
+  toastEl.style.boxShadow = "0 8px 32px rgba(0,0,0,0.5)";
+  toastEl.style.opacity = "0";
+  toastEl.style.transform = "translateY(-30px)";
+  toastEl.style.transition = "all 0.4s ease";
+
+  if (type === "success") toastEl.style.background = "#00c853";
+  else if (type === "error") toastEl.style.background = "#ff5252";
+  else if (type === "warning") toastEl.style.background = "#ff9800";
+  else toastEl.style.background = "#2196f3";
+
+  document.body.appendChild(toastEl);
+
+  requestAnimationFrame(() => {
+    toastEl.style.opacity = "1";
+    toastEl.style.transform = "translateY(0)";
+  });
+
+  setTimeout(() => {
+    toastEl.style.opacity = "0";
+    toastEl.style.transform = "translateY(-30px)";
+    setTimeout(() => toastEl.remove(), 400);
+  }, duration);
+};
+
+// Шорткаты
+const toastSuccess = (msg) => adminToast(msg, "success");
+const toastError   = (msg) => adminToast(msg, "error");
+const toastWarning = (msg) => adminToast(msg, "warning");
+const toastInfo    = (msg) => adminToast(msg, "info");
 console.log("%cДЕБАГ АДМИНКИ 2026 — ПОЛНЫЙ КОМПЛЕКТ, СУКА!", "color:red;font-size:30px");
 console.log("window.isSuperAdmin =", window.isSuperAdmin);
 console.log("localStorage superAdminAuth =", localStorage.getItem("superAdminAuth"));
@@ -42,25 +84,43 @@ window.closeModal = (id) => {
   document.body.style.overflow = "";
 };
 
-// Автозакрытие модалок
+// Универсальная функция закрытия любой открытой модалки (статической или динамической)
+function closeAllModals() {
+  document.querySelectorAll('.modal.show').forEach(modal => {
+    modal.classList.remove('show');
+    setTimeout(() => modal.remove(), 400);
+  });
+
+  document.body.style.overflow = '';
+}
+
+// Автозакрытие модалок — делегирование на document для динамических элементов
 document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll(".close").forEach(el => {
-    el.addEventListener("click", () => {
-      const modal = el.closest(".modal");
-      if (modal) closeModal(modal.id);
-    });
+  // Клик по .close
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('close')) {
+      const modal = e.target.closest('.modal') || e.target.closest('[style*="position:fixed;inset:0"]');
+      if (modal) {
+        modal.classList.remove('show');
+        modal.style.opacity = '0'; // плавное закрытие
+        setTimeout(() => modal.remove(), 300); // для динамических
+        closeAllModals();
+      }
+    }
   });
 
-  document.querySelectorAll(".modal").forEach(modal => {
-    modal.addEventListener("click", e => {
-      if (e.target === modal) closeModal(modal.id);
-    });
+  // Клик по backdrop (вне .modal-content)
+  document.addEventListener('click', (e) => {
+    const modal = e.target.closest('.modal') || e.target.closest('[style*="position:fixed;inset:0"]');
+    if (modal && !e.target.closest('.modal-content')) {
+      closeAllModals();
+    }
   });
 
+  // Esc для всех
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {
-      document.querySelector(".modal.show")?.classList.remove("show");
-      document.body.style.overflow = "";
+      closeAllModals();
     }
   });
 
@@ -228,18 +288,63 @@ function updateMassActionButtons() {
 }
 
 // === МАССОВОЕ УДАЛЕНИЕ ===
+// Безопасный тост — не упадёт, даже если adminToast не загрузился
+const safeToast = (msg, type = 'info') => {
+  if (window.adminToast && typeof window.adminToast === 'function') {
+    if (type === 'success') window.adminToast.success?.(msg) || window.adminToast(msg, 'success');
+    else if (type === 'error')   window.adminToast.error?.(msg)   || window.adminToast(msg, 'error');
+    else if (type === 'warning') window.adminToast.warning?.(msg) || window.adminToast(msg, 'warning');
+    else window.adminToast(msg, type);
+  } else {
+    // fallback, если тосты вообще не приехали
+    console.warn('[SAFE TOAST FALLBACK]', msg);
+    const div = document.createElement('div');
+    div.textContent = msg;
+    div.style.cssText = `
+      position: fixed; top: 20px; right: 20px; padding: 16px 24px; 
+      background: ${type === 'error' ? '#ff5252' : type === 'success' ? '#00c853' : '#ff9800'}; 
+      color: white; border-radius: 8px; z-index: 999999; font-weight: bold;
+    `;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 4000);
+  }
+};
+
+// Сама функция удаления — вставь это вместо старой
 window.deleteSelectedBookings = async () => {
-  if (!selectedBookings.size) return;
-  if (!confirm(`Удалить ${selectedBookings.size} выбранных записей навсегда?`)) return;
+ const checkboxes = document.querySelectorAll('input[type="checkbox"][data-id]:checked');
+  const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.id);
+
+  if (!selectedIds.length) {
+    safeToast('Да выбери хоть одну запись, милорд Coventry!', 'warning');
+    return;
+  }
+
+  if (!confirm(`Ты реально хочешь нахуй удалить ${selectedIds.length} записей?`)) {
+    return;
+  }
+
+  const batch = writeBatch(db);
+  selectedIds.forEach(id => {
+    batch.delete(doc(db, "bookings", id));
+  });
 
   try {
-    const promises = [...selectedBookings].map(id => deleteDoc(doc(db, "bookings", id)));
-    await Promise.all(promises);
-    selectedBookings.clear();
-    toast(`Удалено ${promises.length} записей!`, "success");
+    await batch.commit();
+    safeToast(`Удалено ${selectedIds.length} записей. Красота! 💅`, 'success');
+    
+    // Если у тебя есть функция перерисовки списка — вызови
+    if (typeof renderBookings === 'function') renderBookings();
   } catch (err) {
-    toast("Ошибка при массовом удалении", "error");
-    console.error(err);
+    console.error('Пиздец при удалении:', err);
+    
+    if (err.code === 'permission-denied') {
+      safeToast('Нет прав, мудак. Проверь, под кем залогинился', 'error');
+    } else if (err.code?.includes('network') || err.code === 'deadline-exceeded') {
+      safeToast('Записи скорее всего удалились, но инет подлагал. Обнови страницу и проверь', 'warning');
+    } else {
+      safeToast(`Какая-то хуйня: ${err.message || err}`, 'error');
+    }
   }
 };
 
@@ -299,13 +404,27 @@ async function renderCalendar() {
       </div>`;
   }
   document.getElementById("block-calendar").innerHTML = html;
+  // После html присвоения
+document.getElementById("block-calendar").onclick = (e) => {
+  const dayDiv = e.target.closest('div[onclick^="openDayModal"]');
+  if (dayDiv) {
+    const onclickStr = dayDiv.getAttribute('onclick');
+    const dateMatch = onclickStr.match(/openDayModal\('([^']+)'\)/);
+    if (dateMatch) {
+      openDayModal(dateMatch[1]);
+    }
+  }
+};
 }
 
 // === МОДАЛКА ДНЯ ===
 window.openDayModal = async (date) => {
+  // Закрываем всё старое
+  closeAllModals();
+
   const masterId = currentMaster?.id || null;
 
-  const bookingsSnap = isSuperAdmin
+ const bookingsSnap = isSuperAdmin
     ? await getDocs(query(collection(db, "bookings"), where("date", "==", date)))
     : await getDocs(query(collection(db, "bookings"), where("date", "==", date), where("masterId", "==", masterId)));
 
@@ -316,21 +435,13 @@ window.openDayModal = async (date) => {
   const fullDayBlocked = blockedSnap.docs.some(d => d.data().fullDay);
 
   const overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;";
-
-  const closeThisModal = () => overlay.remove();
-
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeThisModal();
-  });
+  overlay.className = 'modal show'; // сразу show для анимации
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:40px;opacity:1;";
 
   overlay.innerHTML = `
-    <div style="background:white;padding:40px;border-radius:32px;max-width:540px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-hover);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h2 style="color:var(--accent);margin:0;">${date.replace(/-/g, '.')}</h2>
-        <span onclick="this.closest('[style*=\'fixed\']')?.remove()" 
-              style="font-size:2.5rem;cursor:pointer;color:#aaa;">×</span>
-      </div>
+    <div class="modal-content">
+      <span class="close">×</span>
+      <h2 style="color:var(--accent);margin:0 0 20px 0;">${date.replace(/-/g, '.')}</h2>
 
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px;">
         ${timeSlots.map(time => {
@@ -347,27 +458,25 @@ window.openDayModal = async (date) => {
         }).join("")}
       </div>
 
-      <button onclick="toggleFullDay('${date}',${fullDayBlocked})" 
+      <button id="toggle-full-day-btn" 
               style="width:100%;padding:18px;border:none;border-radius:24px;font-size:1.2rem;color:white;
                      background:${fullDayBlocked?'#ff9800':'#ff5252'};cursor:pointer;margin-bottom:12px;">
         ${fullDayBlocked ? 'Разблокировать весь день' : 'Заблокировать весь день'}
       </button>
 
-      <button onclick="this.closest('[style*=\'fixed\']')?.remove()" 
-              style="width:100%;padding:16px;background:#666;color:white;border:none;border-radius:20px;">
+      <button class="close-btn" style="width:100%;padding:16px;background:#666;color:white;border:none;border-radius:20px;">
         Закрыть
       </button>
     </div>`;
 
   document.body.appendChild(overlay);
+  document.body.style.overflow = "hidden";
 
-  const escHandler = (e) => {
-    if (e.key === "Escape") {
-      closeThisModal();
-      document.removeEventListener("keydown", escHandler);
-    }
-  };
-  document.addEventListener("keydown", escHandler);
+  // Слушатели
+  overlay.querySelector('.close').onclick = closeAllModals;
+  overlay.querySelector('.close-btn').onclick = closeAllModals;
+  overlay.onclick = (e) => { if (e.target === overlay) closeAllModals(); };
+  overlay.querySelector('#toggle-full-day-btn').onclick = () => toggleFullDay(date, fullDayBlocked);
 };
 
 // === БЛОКИРОВКА ВРЕМЕНИ ===
@@ -394,11 +503,17 @@ window.toggleFullDay = async (date, currentlyBlocked) => {
     const q = query(collection(db, "blocked"), where("date","==",date), where("fullDay","==",true), where("masterId","==",masterId));
     const snap = await getDocs(q);
     for (const d of snap.docs) await deleteDoc(d.ref);
+    adminToast('День разблокирован, теперь все могут записаться, суки!', 'success');
   } else {
     await addDoc(collection(db, "blocked"), { date, fullDay:true, masterId, createdBy: currentMaster?"master":"admin" });
+    adminToast('День заблокирован — никто не запишется, отдыхай, король!', 'success');
   }
-  document.querySelector("[style*='fixed']")?.remove();
-  renderCalendar();
+
+  // Автозакрытие с задержкой, чтоб тост увидели + перерендер календаря
+  setTimeout(() => {
+    closeAllModals();
+    renderCalendar();
+  }, 1200); // 1.2 секунды — оптимально
 };
 
 // === НАВИГАЦИЯ КАЛЕНДАРЯ ===
@@ -480,9 +595,9 @@ window.saveMaster = async () => {
 window.toggleMasterActive = async (id, active) => {
   try {
     await updateDoc(doc(db, "masters", id), { active });
-    toast(`Мастер ${active ? 'включён' : 'выключен'}`, "success");
+    adminToast(`Мастер ${active ? 'включён' : 'выключен'}`, "success");
   } catch (err) {
-    toast("Ошибка изменения статуса", "error");
+    adminToast("Ошибка изменения статуса", "error");
     console.error(err);
   }
 };
@@ -513,17 +628,17 @@ window.transferBooking = async () => {
   const newTime = document.getElementById("new-booking-time").value;
 
   if (!newDate || !newTime) {
-    toast("Выберите новую дату и время!", "error");
+    adminToast("Выберите новую дату и время!", "error");
     return;
   }
 
   if (confirm(`Перенести запись на ${newDate} в ${newTime}?`)) {
     try {
       await updateDoc(doc(db, "bookings", currentBookingId), { date: newDate, time: newTime });
-      toast("Запись успешно перенесена!", "success");
+      adminToast("Запись успешно перенесена!", "success");
       closeModal("booking-modal");
     } catch (err) {
-      toast("Ошибка переноса", "error");
+      adminToast("Ошибка переноса", "error");
       console.error(err);
     }
   }
@@ -535,10 +650,10 @@ window.cancelBooking = async () => {
   if (confirm("Точно отменить запись? Клиент получит уведомление.")) {
     try {
       await deleteDoc(doc(db, "bookings", currentBookingId));
-      toast("Запись отменена!", "success");
+      adminToast("Запись отменена!", "success");
       closeModal("booking-modal");
     } catch (err) {
-      toast("Ошибка отмены", "error");
+      adminToast("Ошибка отмены", "error");
       console.error(err);
     }
   }

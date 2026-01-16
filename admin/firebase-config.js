@@ -25,8 +25,8 @@ export { app };
 
 // ==================================================================
 // 1. ЖЁСТКАЯ ЗАЩИТА ДОМЕНА (теперь даже на GitHub Pages не заведётся)
-// ==================================================================
-/*const allowedHosts = [
+// =================================================================
+const allowedHosts = [
   "vasiliki.ru",
   "www.vasiliki.ru",
   "localhost",
@@ -35,9 +35,9 @@ export { app };
   "calendar-666-5744f.firebaseapp.com",
   "https://sentech-666.github.io/salon/",
   "https://sentech-666.github.io"
-  "https://sentech-666.github.io/salon/admin/admin.html"
+
  
-];*/
+];
 
 if (!allowedHosts.includes(location.hostname)) {
   document.body.innerHTML = `
