@@ -108,10 +108,11 @@
 <div id="master-modal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeModal('master-modal')">×</span>
-    <h2>Редактировать мастера</h2>
-    <input class="input" id="master-name" placeholder="Имя мастера">
-    <input class="input" id="master-email" placeholder="Email (для входа)">
-    <input class="input" id="master-photo" placeholder="Ссылка на фото (опционально)">
+    <h2>${window.currentEditMasterId ? 'Редактировать мастера' : 'Добавить мастера'}</h2>
+    <input id="master-name" class="input" placeholder="Имя мастера" required>
+    <input id="master-email" class="input" placeholder="Email" type="email" required>
+    <input id="master-password" class="input" placeholder="Пароль (минимум 6 символов)" type="password"> <!-- ← НОВОЕ ПОЛЕ, сука! -->
+    <input id="master-photo" class="input" placeholder="URL фото (опционально)">
     <button class="btn" onclick="saveMaster()">Сохранить</button>
   </div>
 </div>

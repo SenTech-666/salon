@@ -1,10 +1,14 @@
 // admin.js — ВАСИЛИКИ 2026 — АДМИНКА С ФИЛЬТРАМИ И МАССОВЫМИ ДЕЙСТВИЯМИ (16.01.2026)
-
+import {
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,   // ← вот это важно!
+  // ... остальные импорты
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";;
 import { db, auth } from "./firebase-config.js";
 import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc,
   doc, getDoc, getDocs, query, where,
-  writeBatch, serverTimestamp
+  writeBatch, serverTimestamp,setDoc
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 import {
@@ -610,24 +614,69 @@ window.openMasterModal = async (id = null) => {
 };
 
 window.saveMaster = async () => {
-  const name = document.getElementById("master-name").value.trim();
-  const email = document.getElementById("master-email").value.trim();
-  const photo = document.getElementById("master-photo").value.trim();
+  const name     = document.getElementById("master-name").value.trim();
+  const email    = document.getElementById("master-email").value.trim();
+  const password = document.getElementById("master-password").value.trim();
+  const photo    = document.getElementById("master-photo").value.trim();
 
-  if (!name) return alert("Имя обязательно!");
-
-  const data = { name, email: email || null, photo: photo || null, active: true };
+  if (!name || !email) {
+    adminToast("Имя и email — обязательно, иначе мастер — призрак", "warning");
+    return;
+  }
 
   try {
+    let uid;
+
     if (window.currentEditMasterId) {
-      await updateDoc(doc(db, "masters", window.currentEditMasterId), data);
+      // Редактируем существующего
+      uid = window.currentEditMasterId;
+
+      // Если ввели пароль → шлём reset-письмо
+      if (password && password.length >= 6) {
+        await sendPasswordResetEmail(auth, email);
+        adminToast(`Ссылка на смену пароля отправлена на ${email}. Пусть сам меняет, ленивый хуй!`, "success");
+      } else if (password && password.length < 6) {
+        adminToast("Пароль должен быть минимум 6 символов, или оставь пустым", "warning");
+        return;
+      }
+
     } else {
-      await addDoc(collection(db, "masters"), data);
+      // Новый мастер — обязательно пароль
+      if (!password || password.length < 6) {
+        adminToast("Для нового мастера пароль обязателен (минимум 6 символов)", "warning");
+        return;
+      }
+
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      uid = userCredential.user.uid;
+      adminToast(`Мастер "${name}" создан, пароль задан — заходит как бог!`, "success");
     }
+
+    // Сохраняем/обновляем данные в Firestore
+    const masterRef = doc(db, "masters", uid);
+    await setDoc(masterRef, {
+      name,
+      email,
+      photo: photo || null,
+      active: true
+    }, { merge: true });
+
     closeModal("master-modal");
+    // Если есть функция перерендера списка мастеров — вызови её
+    // renderMasters();  // или как у тебя там
+
   } catch (err) {
-    alert("Ошибка сохранения мастера");
-    console.error(err);
+    console.error("Пиздец при сохранении мастера:", err);
+
+    if (err.code === "auth/email-already-in-use") {
+      adminToast("Этот email уже занят другим демоном, выбери другой", "error");
+    } else if (err.code === "auth/weak-password") {
+      adminToast("Пароль слабый, сделай посложнее, не позорься", "error");
+    } else if (err.code === "auth/invalid-email") {
+      adminToast("Email кривой, поправь, милорд", "warning");
+    } else {
+      adminToast(`Ошибка: ${err.message || "пиздец неизвестный"}`, "error");
+    }
   }
 };
 
