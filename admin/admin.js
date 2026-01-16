@@ -50,7 +50,8 @@ console.log("Текущий user:", auth.currentUser?.email);
 import { db, auth } from "./firebase-config.js";
 import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc,
-  doc, getDoc, getDocs, query, where
+  doc, getDoc, getDocs, query, where,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 
@@ -178,6 +179,61 @@ function renderServices() {
       </div>
     `).join("");
 }
+
+// === СОХРАНЕНИЕ УСЛУГИ ===
+window.saveService = async () => {
+  const name = document.getElementById("service-name").value.trim();
+  const price = parseInt(document.getElementById("service-price").value.trim()) || 0;
+  const duration = parseInt(document.getElementById("service-duration").value.trim()) || 60;
+  const description = document.getElementById("service-desc").value.trim();
+
+  if (!name) {
+    adminToast("Название услуги — обязательно, милорд!", "warning");
+    return;
+  }
+
+  if (isNaN(price) || price <= 0) {
+    adminToast("Цена должна быть нормальным числом > 0, а не хуйней", "warning");
+    return;
+  }
+
+  if (isNaN(duration) || duration <= 0) {
+    adminToast("Длительность — нормальное число минут, а не твой хуй", "warning");
+    return;
+  }
+
+  const data = {
+    name,
+    price,
+    duration,
+    description: description || null
+  };
+
+  try {
+    if (window.currentEditServiceId) {
+      // Редактирование существующей услуги
+      await updateDoc(doc(db, "services", window.currentEditServiceId), data);
+      adminToast(`Услуга "${name}" обновлена, красота!`, "success");
+    } else {
+      // Новая услуга
+      await addDoc(collection(db, "services"), data);
+      adminToast(`Новая услуга "${name}" добавлена, пиздец как круто!`, "success");
+    }
+
+    // Очищаем форму и закрываем модалку
+    document.getElementById("service-name").value = "";
+    document.getElementById("service-price").value = "";
+    document.getElementById("service-duration").value = "";
+    document.getElementById("service-desc").value = "";
+    closeModal("service-modal");
+
+    // Перерендер списка услуг
+    renderServices();
+  } catch (err) {
+    console.error("Пиздец при сохранении услуги:", err);
+    adminToast("Ошибка сохранения услуги, проверь консоль, мудак", "error");
+  }
+};
 
 // === РЕНДЕР МАСТЕРОВ ===
 function renderMasters(docs) {
@@ -312,42 +368,31 @@ const safeToast = (msg, type = 'info') => {
 
 // Сама функция удаления — вставь это вместо старой
 window.deleteSelectedBookings = async () => {
- const checkboxes = document.querySelectorAll('input[type="checkbox"][data-id]:checked');
-  const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.id);
-
-  if (!selectedIds.length) {
-    safeToast('Да выбери хоть одну запись, милорд Coventry!', 'warning');
+  if (selectedBookings.size === 0) {
+    adminToast('Да выбери хоть одну запись, милорд Coventry!', "warning");
     return;
   }
 
-  if (!confirm(`Ты реально хочешь нахуй удалить ${selectedIds.length} записей?`)) {
-    return;
-  }
+  if (!confirm(`Ты реально хочешь нахуй удалить ${selectedBookings.size} записей?`)) return;
 
   const batch = writeBatch(db);
-  selectedIds.forEach(id => {
-    batch.delete(doc(db, "bookings", id));
-  });
+  selectedBookings.forEach(id => batch.delete(doc(db, "bookings", id)));
 
   try {
     await batch.commit();
-    safeToast(`Удалено ${selectedIds.length} записей. Красота! 💅`, 'success');
-    
-    // Если у тебя есть функция перерисовки списка — вызови
-    if (typeof renderBookings === 'function') renderBookings();
+    adminToast(`Удалено ${selectedBookings.size} записей. Красота! 💅`, "success");
+    selectedBookings.clear();
+    updateMassActionButtons();
+    renderBookings();
   } catch (err) {
     console.error('Пиздец при удалении:', err);
-    
     if (err.code === 'permission-denied') {
-      safeToast('Нет прав, мудак. Проверь, под кем залогинился', 'error');
-    } else if (err.code?.includes('network') || err.code === 'deadline-exceeded') {
-      safeToast('Записи скорее всего удалились, но инет подлагал. Обнови страницу и проверь', 'warning');
+      adminToast('Нет прав, мудак. Проверь логин', "error");
     } else {
-      safeToast(`Какая-то хуйня: ${err.message || err}`, 'error');
+      adminToast(`Ошибка: ${err.message || err}`, "error");
     }
   }
 };
-
 // === МАССОВЫЙ ПЕРЕНОС (заглушка с планом на будущее) ===
 window.transferSelectedBookings = () => {
   if (!selectedBookings.size) return;
@@ -529,6 +574,7 @@ document.getElementById("nextMonthBlock")?.addEventListener("click", () => {
 // === МОДАЛКИ УСЛУГ, МАСТЕРОВ, ЗАПИСИ (оставил без изменений) ===
 window.openServiceModal = (id = null) => {
   window.currentEditId = id;
+  window.currentEditServiceId = id;
   openModal("service-modal");
   
   if (id) {
