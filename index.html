@@ -169,6 +169,15 @@
       deferredPrompt.prompt();
     };
   </script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/salon/sw.js')  // ← путь к твоему sw.js, если в /salon/
+        .then(reg => console.log('Service Worker зарегистрирован, господин! Теперь PWA встанет.', reg))
+        .catch(err => console.error('Service Worker не встал, сука: ', err));
+    });
+  }
+</script>
 
 </body>
 </html>
