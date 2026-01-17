@@ -112,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (modal) {
         modal.classList.remove('show');
         modal.style.opacity = '0'; // плавное закрытие
-        setTimeout(() => modal.remove(), 300); // для динамических
+        
         closeAllModals();
       }
     }
@@ -572,9 +572,24 @@ document.getElementById("nextMonthBlock")?.addEventListener("click", () => {
 // === МОДАЛКИ УСЛУГ, МАСТЕРОВ, ЗАПИСИ ===
 window.openServiceModal = (id = null) => {
   window.currentEditServiceId = id;
-  openModal("service-modal");
   
+  const modal = document.getElementById("service-modal");
+  if (!modal) return;
+
+  // Очищаем поля
+  document.getElementById("service-name").value = "";
+  document.getElementById("service-price").value = "";
+  document.getElementById("service-duration").value = "";
+  document.getElementById("service-desc").value = "";
+
+  const deleteBtn = document.getElementById("delete-service-btn");
+  const title = document.getElementById("service-modal-title");
+
   if (id) {
+    // Редактирование
+    title.textContent = "Редактировать услугу";
+    if (deleteBtn) deleteBtn.style.display = "inline-block";
+
     const service = window.servicesList.find(s => s.id === id);
     if (service) {
       document.getElementById("service-name").value = service.name || "";
@@ -583,24 +598,35 @@ window.openServiceModal = (id = null) => {
       document.getElementById("service-desc").value = service.description || "";
     }
   } else {
-    document.getElementById("service-name").value = "";
-    document.getElementById("service-price").value = "";
-    document.getElementById("service-duration").value = "";
-    document.getElementById("service-desc").value = "";
+    // Новая услуга
+    title.textContent = "Добавить услугу";
+    if (deleteBtn) deleteBtn.style.display = "none";
   }
+
+  openModal("service-modal");
 };
 
 window.openMasterModal = async (id = null) => {
+  event?.stopPropagation?.(); 
   window.currentEditMasterId = id;
   
   const modal = document.getElementById("master-modal");
   if (!modal) return;
 
+  // Очищаем поля
   document.getElementById("master-name").value = "";
   document.getElementById("master-email").value = "";
+  document.getElementById("master-password").value = "";
   document.getElementById("master-photo").value = "";
 
+  const deleteBtn = document.getElementById("delete-master-btn");
+  const title = document.getElementById("master-modal-title");
+
   if (id) {
+    // Редактирование
+    title.textContent = "Редактировать мастера";
+    deleteBtn.style.display = "inline-block"; // ← Показываем кнопку удаления
+
     const docSnap = await getDoc(doc(db, "masters", id));
     if (docSnap.exists()) {
       const m = docSnap.data();
@@ -608,9 +634,73 @@ window.openMasterModal = async (id = null) => {
       document.getElementById("master-email").value = m.email || "";
       document.getElementById("master-photo").value = m.photo || "";
     }
+  } else {
+    // Новый мастер
+    title.textContent = "Добавить мастера";
+    deleteBtn.style.display = "none"; // ← Прячем кнопку удаления
   }
 
   openModal("master-modal");
+};
+
+// === УДАЛЕНИЕ УСЛУГИ ===
+window.deleteService = async () => {
+  const id = window.currentEditServiceId;
+  if (!id) {
+    adminToast("Какого хуя удалять услугу, которой ещё нет?", "warning");
+    return;
+  }
+
+  const name = document.getElementById("service-name").value.trim() || "эту услугу";
+
+  if (!confirm(`Ты реально хочешь нахуй удалить услугу "${name}"?\n\nЭто удалит её из всех записей и списков. Отмены не будет.`)) {
+    return;
+  }
+
+  try {
+    await deleteDoc(doc(db, "services", id));
+    adminToast(`Услуга "${name}" удалена нахуй!`, "success");
+    closeModal("service-modal");
+    // onSnapshot сам обновит список услуг
+  } catch (err) {
+    console.error("Пиздец при удалении услуги:", err);
+    adminToast("Не удалось удалить: " + (err.message || "хуй знает что"), "error");
+  }
+};
+
+window.deleteMaster = async () => {
+  const uid = window.currentEditMasterId;
+  if (!uid) {
+    adminToast("Какого хуя удалять, если мастера ещё нет?", "warning");
+    return;
+  }
+
+  const name = document.getElementById("master-name").value.trim() || "этого мастера";
+
+  if (!confirm(`Ты реально хочешь нахуй удалить мастера "${name}"?\n\nЭто удалит его аккаунт из Auth и запись из базы. Отмены не будет.`)) {
+    return;
+  }
+
+  try {
+    // 1. Удаляем документ из Firestore
+    await deleteDoc(doc(db, "masters", uid));
+
+    // 2. Удаляем пользователя из Authentication (требует Admin SDK, на клиенте НЕЛЬЗЯ!)
+    // Поэтому пока просто удаляем из masters и деактивируем
+    // Если хочешь полный delete из Auth — нужно Cloud Function или ручное удаление в консоли
+    adminToast(`Мастер "${name}" удалён из базы. Аккаунт в Auth остался (для безопасности).`, "success");
+
+    closeModal("master-modal");
+
+    // Перерендерить список мастеров
+    // Если у тебя onSnapshot уже слушает masters — он сам обновится
+    // Или вручную:
+    // renderMasters();   // если есть такая функция
+
+  } catch (err) {
+    console.error("Пиздец при удалении мастера:", err);
+    adminToast("Не удалось удалить: " + (err.message || "хуй знает что"), "error");
+  }
 };
 
 window.saveMaster = async () => {

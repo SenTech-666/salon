@@ -63,7 +63,8 @@
     
     <!-- ФИЛЬТРЫ И ПОИСК -->
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;">
-      <input type="text" class="input" id="search" placeholder="Поиск по имени, телефону или услуге..." oninput="renderBookings()">
+      <form autocomplete="off" style="display:contents;"><input type="text" class="input" id="search" placeholder="Поиск по имени, телефону или услуге..." oninput="renderBookings()"  ></form>
+      
       <input type="date" class="input" id="filter-date" onchange="renderBookings()">
       <select id="filter-master" class="input" onchange="renderBookings()">
         <option value="">Все мастера</option>
@@ -96,24 +97,48 @@
 <div id="service-modal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeModal('service-modal')">×</span>
-    <h2>Услуга</h2>
-    <input class="input" id="service-name" placeholder="Название">
-    <input class="input" id="service-price" placeholder="Цена (₽)">
-    <input class="input" id="service-duration" placeholder="Длительность (мин)">
-    <textarea class="input" id="service-desc" placeholder="Описание" style="height:100px;resize:vertical;"></textarea>
-    <button class="btn" onclick="saveService()">Сохранить</button>
+    <h2 id="service-modal-title">Добавить / Редактировать услугу</h2>
+
+    <input id="service-name" class="input" placeholder="Название услуги" required>
+    <input id="service-price" class="input" placeholder="Цена (₽)" type="number" min="0">
+    <input id="service-duration" class="input" placeholder="Длительность (мин)" type="number" min="1">
+    <textarea id="service-desc" class="input" placeholder="Описание (опционально)" rows="4"></textarea>
+
+    <div style="display: flex; gap: 16px; margin-top: 24px;">
+      <button class="btn" onclick="saveService()">Сохранить</button>
+      
+      <!-- Кнопка удаления — показывается только при редактировании -->
+      <button id="delete-service-btn" 
+              class="btn btn-danger" 
+              style="display:none;" 
+              onclick="deleteService()">
+        Удалить услугу
+      </button>
+    </div>
   </div>
 </div>
 
 <div id="master-modal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeModal('master-modal')">×</span>
-    <h2>${window.currentEditMasterId ? 'Редактировать мастера' : 'Добавить мастера'}</h2>
+    <h2 id="master-modal-title">Добавить / Редактировать мастера</h2>
+
     <input id="master-name" class="input" placeholder="Имя мастера" required>
     <input id="master-email" class="input" placeholder="Email" type="email" required>
-    <input id="master-password" class="input" placeholder="Пароль (минимум 6 символов)" type="password"> <!-- ← НОВОЕ ПОЛЕ, сука! -->
+    <input id="master-password" class="input" placeholder="Пароль (для нового — обязательно)" type="password">
     <input id="master-photo" class="input" placeholder="URL фото (опционально)">
-    <button class="btn" onclick="saveMaster()">Сохранить</button>
+
+    <div style="display: flex; gap: 16px; margin-top: 24px;">
+      <button class="btn" onclick="saveMaster()">Сохранить</button>
+      
+      <!-- Кнопка удаления — показываем только при редактировании -->
+      <button id="delete-master-btn" 
+              class="btn btn-danger" 
+              style="display:none;" 
+              onclick="deleteMaster()">
+        Удалить мастера
+      </button>
+    </div>
   </div>
 </div>
 
