@@ -1,4 +1,4 @@
-// src/toast.js — ТОАСТЫ, КОТОРЫЕ ЕБУТ МОЗГ КРАСОТОЙ
+// src/toast.js — ТОАСТЫ
 
 export const toast = (message, type = "info", duration = 3200) => {
   console.log(`%c🍞 ТОСТ: ${message}`, `color: ${type === 'error' ? '#ff5252' : '#4caf50'}; font-weight: bold;`);
@@ -21,11 +21,11 @@ export const toast = (message, type = "info", duration = 3200) => {
   }, duration);
 };
 
-// Дополнительные шорткаты, чтоб было удобно материться
+// Дополнительные шорткаты
 toast.success = (msg) => toast(msg, "success");
 toast.error   = (msg) => toast(msg, "error");
 toast.warning = (msg) => toast(msg, "warning");
 toast.info    = (msg) => toast(msg, "info");
 
-// Глобально вешаем, чтоб можно было писать просто toast("Пиздец, ты записался!")
+// Глобально 
 window.toast = toast;

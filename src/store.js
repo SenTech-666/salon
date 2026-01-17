@@ -1,4 +1,4 @@
-// src/store.js — ЕДИНСТВЕННЫЙ ИСТОЧНИК ПРАВДЫ, СУКА! 11.12.2025
+// src/store.js 
 import { db } from "./firebase.js";
 import { collection, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 

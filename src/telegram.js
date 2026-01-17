@@ -34,7 +34,6 @@ export const sendTelegramNotification = async (booking) => {
       const error = await response.json();
       console.warn("Telegram ошибка:", error);
     }
-    // Если всё ок — ничего не делаем (тихо радуемся)
   } catch (err) {
     console.warn("Telegram не отправил (но запись сохранена):", err);
   }

@@ -1,5 +1,7 @@
-// src/components.js — ФИНАЛЬНАЯ ВЕРСИЯ 16.01.2026 — СЕЛЕКТ МАСТЕРОВ + СОХРАНЕНИЕ В localStorage + ПРИНУДИТЕЛЬНАЯ ПЕРЕРИСОВКА
-console.log("%ccomponents.js — ЗАГРУЖЕН 16.01.2026 — СОХРАНЕНИЕ МАСТЕРА + ОБНОВЛЕНИЕ КАЛЕНДАРЯ", "color: gold; background: black; font-size: 42px");
+// src/components.js
+// Модуль пользовательских компонентов интерфейса
+// Отвечает за работу селекта мастеров, модальных окон записи, автозаполнения форм, 
+// обработки отмены/переноса записей и взаимодействия клиента с календарем
 
 import { store, subscribe } from "./store.js";
 import { showModal, closeModal } from "./modal.js";
@@ -10,12 +12,13 @@ import { db, auth } from "./firebase.js";
 import { doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 
+// Глобальные переменные для хранения состояния клиента и выбранного мастера
 let clientId = localStorage.getItem('clientId') || null;
 window.selectedGlobalMasterId = localStorage.getItem('selectedMasterId') || null;
 let currentModalDate = null;
 let currentOwnBookingId = null;
 
-// Обновляем clientId при анонимной авторизации
+// Обновление идентификатора клиента при успешной анонимной аутентификации
 onAuthStateChanged(auth, (user) => {
   if (user && user.isAnonymous) {
     clientId = user.uid;
@@ -23,7 +26,12 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Автозаполнение полей по предыдущей записи
+/**
+ * Загружает данные последней записи клиента для автозаполнения формы
+ * Сначала проверяет кэш в localStorage (действителен 30 дней), 
+ * затем ищет последнюю реальную запись в store
+ * @returns {Object|null} Данные для автозаполнения или null
+ */
 const loadLastBookingData = () => {
   const cached = JSON.parse(localStorage.getItem(`lastBookingData_${clientId}`));
   if (cached && Date.now() - cached.timestamp < 30 * 24 * 60 * 60 * 1000) {
@@ -45,6 +53,12 @@ const loadLastBookingData = () => {
   };
 };
 
+/**
+ * Сохраняет данные последней записи клиента в localStorage
+ * @param {string} name Имя клиента
+ * @param {string} phone Телефон клиента
+ * @param {string} serviceId Идентификатор выбранной услуги
+ */
 const saveLastBookingData = (name, phone, serviceId) => {
   if (!clientId) return;
   const data = {
@@ -56,137 +70,86 @@ const saveLastBookingData = (name, phone, serviceId) => {
   localStorage.setItem(`lastBookingData_${clientId}`, JSON.stringify(data));
 };
 
-// === СЕЛЕКТ МАСТЕРА ===
+/**
+ * Обновляет глобальный селект выбора мастера
+ * Учитывает настройки allowMasterSelect и наличие активных мастеров в базе
+ */
 function updateGlobalMasterSelect() {
   const select = document.getElementById("globalMasterSelect");
   if (!select) {
-    console.warn("Селект #globalMasterSelect не найден, сука. Где он, блядь?");
+    console.warn("Элемент селекта мастеров #globalMasterSelect не найден в DOM");
     return;
   }
 
   const allowSelect = store.settings?.allowMasterSelect ?? true;
-  const hasMasters = store.masters?.length > 0;
+  const hasActiveMasters = store.masters?.length > 0;
 
-  // Если выбор мастеров отключён или мастеров вообще нет — прячем всё нахуй
-  // Если выбор мастеров отключён или мастеров вообще нет — прячем всю хуйню нахуй
-// Прячем весь блок ТОЛЬКО если мастеров реально нет (store.masters.length === 0)
-const hasActiveMasters = store.masters?.length > 0;
+  const container = document.getElementById("master-select-container");
 
-const container = document.getElementById("master-select-container");
-if (!container) {
-  console.warn("Контейнер #master-select-container не найден, но похуй продолжаем");
-}
+  // Если нет ни одного активного мастера — полностью скрываем блок выбора
+  if (!hasActiveMasters) {
+    if (container) container.style.display = "none";
+    select.style.display = "none";
 
-if (!hasActiveMasters) {
-  // Нет ни одного активного мастера — всё нахуй скрываем
-  if (container) container.style.display = "none";
-  select.style.display = "none"; // на всякий случай
+    window.selectedGlobalMasterId = null;
+    localStorage.removeItem('selectedMasterId');
 
-  window.selectedGlobalMasterId = null;
-  localStorage.removeItem('selectedMasterId');
-
-  console.log("%c[MASTER SELECT] Мастеров вообще нет → весь блок спрятан нахуй, как твой бывший в чёрном списке", 
-              "color: #ff4444; font-weight: bold; background: #000; padding: 4px 8px;");
-
-  // Рендерим календарь сразу в общем режиме
-  if (typeof window.renderCalendar === 'function') {
-    window.renderCalendar();
+    if (typeof window.renderCalendar === 'function') {
+      window.renderCalendar();
+    }
+    return;
   }
-  
-  return; // дальше не ебёмся
-}
 
-// Если мастера есть — показываем контейнер независимо от allowMasterSelect
-if (container) container.style.display = "block";
+  // Показываем контейнер, если хотя бы один мастер существует
+  if (container) container.style.display = "block";
 
-// Дальше обычная логика: если allowMasterSelect = false — делаем селект минимальным
-if (!allowSelect) {
-  select.innerHTML = '<option value="">Общий график (единственный вариант)</option>';
-  select.value = "";
-  window.selectedGlobalMasterId = null;
-  localStorage.removeItem('selectedMasterId');
-  
-  console.log("%c[MASTER SELECT] Выбор отключён в настройках → только общий график, мастеров не выбираем", 
-              "color: #ffcc00; font-weight: bold; background: #000; padding: 4px 8px;");
-} else {
-  // Полный селект с мастерами
-  const sortedMasters = [...store.masters].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-  let html = `<option value="">Общий график (все мастера)</option>`;
-  html += sortedMasters.map(m => `<option value="${m.id}">${m.name}</option>`).join("");
-  select.innerHTML = html;
-
-  // Восстанавливаем сохранённый выбор
-  const saved = localStorage.getItem('selectedMasterId');
-  if (saved && store.masters.some(m => m.id === saved)) {
-    select.value = saved;
-    window.selectedGlobalMasterId = saved;
-  } else {
+  if (!allowSelect) {
+    // Выбор мастера отключён в настройках — показываем только общий график
+    select.innerHTML = '<option value="">Общий график (единственный вариант)</option>';
     select.value = "";
     window.selectedGlobalMasterId = null;
-  }
-
-  localStorage.setItem('selectedMasterId', window.selectedGlobalMasterId || "");
-}
-
-console.log(`%c[MASTER SELECT] → выбран: ${window.selectedGlobalMasterId || 'Общий'} → рендерим`, 
-            "color: #00ff9d; font-weight: bold; background: #000; padding: 4px 8px;");
-
-// Финальный рендер календаря
-if (typeof window.renderCalendar === 'function') {
-  window.renderCalendar();
-}
-
-  // Если дошли сюда — мастера есть и выбор включён → показываем селект
-  select.style.display = "block";
-
-  // Сортируем мастеров по имени (русский порядок, чтоб не было пиздеца с "Я" после "А")
-  const sortedMasters = [...store.masters].sort((a, b) => 
-    a.name.localeCompare(b.name, 'ru')
-  );
-
-  let html = `<option value="">Общий график (все мастера)</option>`;
-  html += sortedMasters.map(m => 
-    `<option value="${m.id}">${m.name}</option>`
-  ).join("");
-
-  select.innerHTML = html;
-
-  // Пытаемся восстановить предыдущий выбор
-  const saved = localStorage.getItem('selectedMasterId');
-  let newSelected = null;
-
-  if (saved && store.masters.some(m => m.id === saved)) {
-    newSelected = saved;
+    localStorage.removeItem('selectedMasterId');
   } else {
-    // Если сохранённого нет или он больше не существует — сбрасываем в общий
-    newSelected = null;
+    // Формируем полный список мастеров с сортировкой по имени (русский порядок)
+    const sortedMasters = [...store.masters].sort((a, b) => 
+      a.name.localeCompare(b.name, 'ru')
+    );
+
+    let html = `<option value="">Общий график (все мастера)</option>`;
+    html += sortedMasters.map(m => 
+      `<option value="${m.id}">${m.name}</option>`
+    ).join("");
+
+    select.innerHTML = html;
+
+    // Восстанавливаем ранее выбранного мастера, если он всё ещё существует
+    const saved = localStorage.getItem('selectedMasterId');
+    let newSelected = null;
+
+    if (saved && store.masters.some(m => m.id === saved)) {
+      newSelected = saved;
+    }
+
+    select.value = newSelected || "";
+    window.selectedGlobalMasterId = newSelected;
+    localStorage.setItem('selectedMasterId', newSelected || "");
   }
 
-  select.value = newSelected || "";
-  window.selectedGlobalMasterId = newSelected;
-
-  // Сохраняем актуальный выбор (даже если null — чистим localStorage)
-  localStorage.setItem('selectedMasterId', newSelected || "");
-
-  console.log(`%c[MASTER SELECT] → выбран мастер: ${newSelected || 'Общий график'} → обновляем календарь`, 
-              'color: #00ff9d; font-weight: bold; background: #000; padding: 4px 8px;');
-
-  // Принудительный рендер календаря — без этого иногда календарь тупит
+  // Принудительная перерисовка календаря после изменения селекта
   if (typeof window.renderCalendar === 'function') {
     window.renderCalendar();
-  } else {
-    console.error("renderCalendar не найден в window, пиздец какой-то");
   }
 }
 
+// Делаем функцию доступной глобально
 window.updateGlobalMasterSelect = updateGlobalMasterSelect;
 
-// Обработчик изменения селекта
+// Привязка обработчика события изменения селекта мастера
 function attachMasterSelectListener() {
   const select = document.getElementById("globalMasterSelect");
   if (!select) return;
 
-  // Удаляем старый обработчик, если был (избегаем дублирования)
+  // Удаляем старый обработчик, чтобы избежать дублирования
   select.removeEventListener("change", handleMasterChange);
   select.addEventListener("change", handleMasterChange);
 }
@@ -196,16 +159,12 @@ function handleMasterChange(e) {
   window.selectedGlobalMasterId = newMasterId;
   localStorage.setItem('selectedMasterId', newMasterId || "");
 
-  console.log(`%cСмена мастера в селекте → ${newMasterId || 'Общий график'} | Перерисовка календаря`, 'color:#ffcc00; font-weight:bold; background:#000; padding:4px 8px;');
-
   if (typeof window.renderCalendar === 'function') {
     window.renderCalendar();
-  } else {
-    console.error("renderCalendar не найден при смене мастера");
   }
 }
 
-// Подписка на store — обновляем селект и вешаем слушатель
+// Автоматическое обновление селекта при изменении данных в store
 subscribe(() => {
   setTimeout(() => {
     const select = document.getElementById("globalMasterSelect");
@@ -216,27 +175,37 @@ subscribe(() => {
   }, 80);
 });
 
-// Первичная инициализация
+// Первичная инициализация селекта при загрузке страницы
 setTimeout(() => {
   const select = document.getElementById("globalMasterSelect");
   if (select) {
     window.updateGlobalMasterSelect();
     attachMasterSelectListener();
 
-    // Дополнительный принудительный рендер после полной загрузки
+    // Дополнительный рендер календаря после полной инициализации
     if (typeof window.renderCalendar === 'function') {
       window.renderCalendar();
     }
   }
 }, 600);
 
-// === ОТКРЫТИЕ МОДАЛКИ ===
+/**
+ * Открывает модальное окно для создания новой записи или управления существующей
+ * @param {string} dateISO Дата в формате YYYY-MM-DD
+ */
 window.showBookingModal = (dateISO) => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return toast("Ошибка даты", "error");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+    toast("Некорректный формат даты", "error");
+    return;
+  }
 
   const fullDayBlocked = store.blocked.some(b => b.date === dateISO && b.fullDay);
-  if (fullDayBlocked && !store.isAdmin) return toast("День закрыт", "error");
+  if (fullDayBlocked && !store.isAdmin) {
+    toast("Этот день полностью закрыт для записи", "error");
+    return;
+  }
 
+  // Для администратора — редирект в админ-панель
   if (store.isAdmin) {
     location.href = `/admin/admin.html?date=${dateISO}`;
     return;
@@ -244,6 +213,7 @@ window.showBookingModal = (dateISO) => {
 
   currentModalDate = dateISO;
 
+  // Проверяем, есть ли у клиента активная запись на эту дату
   const ownBooking = store.bookings.find(b => 
     b.date === dateISO && 
     b.clientId === clientId && 
@@ -259,7 +229,10 @@ window.showBookingModal = (dateISO) => {
   }
 };
 
-// === МОДАЛКА СВОЕЙ ЗАПИСИ ===
+/**
+ * Отображает модальное окно с информацией о существующей записи клиента
+ * @param {Object} booking Данные существующей записи
+ */
 function showOwnBookingModal(booking) {
   const masterName = booking.masterId 
     ? store.masters.find(m => m.id === booking.masterId)?.name || "—" 
@@ -280,43 +253,55 @@ function showOwnBookingModal(booking) {
         <p><strong>Мастер:</strong> ${masterName}</p>
       </div>
       ${canManage ? `
-        <button onclick="startTransferOwnBooking('${booking.id}')" style="width:100%;padding:18px;margin:12px 0;background:var(--accent);color:white;border:none;border-radius:24px;font-size:1.3rem;font-weight:600;">Перенести</button>
-        <button onclick="cancelOwnBooking('${booking.id}')" style="width:100%;padding:18px;margin:12px 0;background:#ff5252;color:white;border:none;border-radius:24px;font-size:1.3rem;font-weight:600;">Отменить</button>
-      ` : `<p style="color:#ff9800;font-weight:600;">Менее 24 часов — только по телефону</p>`}
+        <button onclick="startTransferOwnBooking('${booking.id}')" style="width:100%;padding:18px;margin:12px 0;background:var(--accent);color:white;border:none;border-radius:24px;font-size:1.3rem;font-weight:600;">Перенести запись</button>
+        <button onclick="cancelOwnBooking('${booking.id}')" style="width:100%;padding:18px;margin:12px 0;background:#ff5252;color:white;border:none;border-radius:24px;font-size:1.3rem;font-weight:600;">Отменить запись</button>
+      ` : `<p style="color:#ff9800;font-weight:600;">До записи менее 24 часов — изменения только по телефону</p>`}
       <button onclick="closeModal()" style="margin-top:20px;width:100%;padding:16px;background:#666;color:white;border:none;border-radius:20px;">Закрыть</button>
     </div>
   `);
 }
 
-// === ОТМЕНА ===
+/**
+ * Отмена существующей записи клиента
+ * @param {string} bookingId Идентификатор записи
+ */
 window.cancelOwnBooking = async (bookingId) => {
-  if (!confirm("Точно отменить?")) return;
+  if (!confirm("Вы действительно хотите отменить запись?")) return;
+
   try {
     const booking = store.bookings.find(b => b.id === bookingId);
     if (!booking) throw new Error("Запись не найдена");
-    
+
     await deleteDoc(doc(db, "bookings", bookingId));
     await sendTelegramNotification({ ...booking, action: "ОТМЕНА КЛИЕНТОМ" });
+
     store.bookings = store.bookings.filter(b => b.id !== bookingId);
-    toast("Запись отменена!", "success");
+    toast("Запись успешно отменена", "success");
     closeModal();
   } catch (err) {
-    toast("Ошибка отмены", "error");
-    console.error(err);
+    toast("Не удалось отменить запись", "error");
+    console.error("Ошибка отмены записи:", err);
   }
 };
 
-// === ПЕРЕНОС ===
+/**
+ * Запускает процесс переноса существующей записи
+ */
 window.startTransferOwnBooking = () => {
   closeModal();
   setTimeout(() => {
     window.showBookingModal(currentModalDate);
-    toast("Выберите новое время", "info");
+    toast("Выберите новое время для переноса", "info");
   }, 400);
 };
 
+/**
+ * Выполняет перенос существующей записи на новое время (если нужно)
+ * @returns {Promise<boolean>} true — если перенос выполнен успешно
+ */
 window.transferBookingIfNeeded = async () => {
   if (!currentOwnBookingId) return false;
+
   const oldBooking = store.bookings.find(b => b.id === currentOwnBookingId);
   if (!oldBooking) return false;
 
@@ -324,8 +309,9 @@ window.transferBookingIfNeeded = async () => {
   const serviceId = document.getElementById("service")?.value;
   const service = store.services.find(s => s.id === serviceId);
 
-  if (!service || !newTime || (window.isTimeOverlappingGlobal && window.isTimeOverlappingGlobal(currentModalDate, newTime, service.duration))) {
-    toast("Время занято или услуга не выбрана!", "error");
+  if (!service || !newTime || 
+      (window.isTimeOverlappingGlobal && window.isTimeOverlappingGlobal(currentModalDate, newTime, service.duration))) {
+    toast("Выбранное время занято или услуга не указана", "error");
     return false;
   }
 
@@ -346,24 +332,27 @@ window.transferBookingIfNeeded = async () => {
         : b
     );
 
-    toast("Запись перенесена!", "success");
+    toast("Запись успешно перенесена", "success");
     currentOwnBookingId = null;
     return true;
   } catch (err) {
-    toast("Ошибка переноса", "error");
-    console.error(err);
+    toast("Ошибка при переносе записи", "error");
+    console.error("Ошибка переноса:", err);
     return false;
   }
 };
 
-// === СОЗДАНИЕ / ПЕРЕНОС ЗАПИСИ ===
+/**
+ * Создаёт новую запись или выполняет перенос существующей
+ */
 window.bookAppointment = async () => {
   if (currentOwnBookingId) {
-    const ok = await window.transferBookingIfNeeded();
-    if (ok) {
+    const success = await window.transferBookingIfNeeded();
+    if (success) {
       document.getElementById("finalStep")?.style?.setProperty("display", "none");
       document.getElementById("instantSuccess")?.style?.setProperty("display", "block");
-      document.getElementById("successDetails").innerHTML = `Перенесено!<br>${new Date(currentModalDate).toLocaleDateString("ru-RU", {day:"numeric", month:"long"})} в <strong>${window.selectedTimeForBooking}</strong>`;
+      document.getElementById("successDetails").innerHTML = 
+        `Запись перенесена!<br>${new Date(currentModalDate).toLocaleDateString("ru-RU", {day:"numeric", month:"long"})} в <strong>${window.selectedTimeForBooking}</strong>`;
       setTimeout(closeModal, 4000);
     }
     return;
@@ -375,14 +364,19 @@ window.bookAppointment = async () => {
   const serviceSelect = document.getElementById("service");
 
   if (!time || !nameInput?.value?.trim() || !phoneInput?.value?.trim() || !serviceSelect?.value) {
-    return toast("Заполните все поля", "error");
+    toast("Пожалуйста, заполните все обязательные поля", "error");
+    return;
   }
 
   const service = store.services.find(s => s.id === serviceSelect.value);
-  if (!service) return toast("Услуга не найдена", "error");
+  if (!service) {
+    toast("Выбранная услуга не найдена", "error");
+    return;
+  }
 
   if (window.isTimeOverlappingGlobal && window.isTimeOverlappingGlobal(currentModalDate, time, service.duration)) {
-    return toast("Время уже занято!", "error");
+    toast("Выбранное время уже занято", "error");
+    return;
   }
 
   const bookingData = {
@@ -407,8 +401,9 @@ window.bookAppointment = async () => {
 
     document.getElementById("finalStep")?.style?.setProperty("display", "none");
     document.getElementById("instantSuccess")?.style?.setProperty("display", "block");
-    document.getElementById("successDetails").innerHTML = `${new Date(currentModalDate).toLocaleDateString("ru-RU", {day:"numeric", month:"long"})} в <strong>${time}</strong><br>${service.name}`;
-    toast("Запись создана!", "success");
+    document.getElementById("successDetails").innerHTML = 
+      `${new Date(currentModalDate).toLocaleDateString("ru-RU", {day:"numeric", month:"long"})} в <strong>${time}</strong><br>${service.name}`;
+    toast("Запись успешно создана", "success");
     setTimeout(closeModal, 4000);
 
     setTimeout(() => {
@@ -417,12 +412,15 @@ window.bookAppointment = async () => {
       }
     }, 300);
   } catch (err) {
-    toast("Ошибка записи", "error");
-    console.error(err);
+    toast("Не удалось создать запись", "error");
+    console.error("Ошибка создания записи:", err);
   }
 };
 
-// === ОТКРЫТИЕ МОДАЛКИ НОВОЙ ЗАПИСИ ===
+/**
+ * Открывает модальное окно для создания новой записи
+ * @param {string} dateStr Дата в формате YYYY-MM-DD
+ */
 const openClientModal = (dateStr) => {
   const masterName = window.selectedGlobalMasterId 
     ? store.masters.find(m => m.id === window.selectedGlobalMasterId)?.name || "Мастер"
@@ -457,7 +455,7 @@ const openClientModal = (dateStr) => {
       </div>
 
       <div id="instantSuccess" style="display:none;text-align:center;padding:50px 0;">
-        <div style="font-size:6rem;margin-bottom:20px;">Успешно!</div>
+       
         <p style="font-size:1.6rem;color:var(--accent);line-height:1.6" id="successDetails"></p>
       </div>
     </div>
@@ -479,7 +477,10 @@ const openClientModal = (dateStr) => {
   });
 };
 
-// === РЕНДЕР СЛОТОВ В МОДАЛКЕ ===
+/**
+ * Отрисовывает временные слоты в модальном окне записи
+ * @param {string} dateStr Дата в формате YYYY-MM-DD
+ */
 const renderTimeSlotsInModal = (dateStr) => {
   const grid = document.getElementById("timeGrid");
   if (!grid) return;
@@ -523,12 +524,22 @@ const renderTimeSlotsInModal = (dateStr) => {
   }).join("");
 };
 
+/**
+ * Преобразует время в минуты с начала дня
+ * @param {string} time Время в формате HH:MM
+ * @returns {number} Количество минут
+ */
 const timeToMinutes = (time) => {
   if (!time) return 0;
   const [h, m] = time.split(":").map(Number);
   return h * 60 + (m || 0);
 };
 
+/**
+ * Выбирает временной слот в модальном окне
+ * @param {string} time Выбранное время
+ * @param {HTMLElement} el Элемент слота
+ */
 window.selectTime = (time, el) => {
   const serviceSelect = document.getElementById("service");
   let duration = 60;
@@ -538,7 +549,7 @@ window.selectTime = (time, el) => {
   }
 
   if (window.isTimeOverlappingGlobal && window.isTimeOverlappingGlobal(currentModalDate, time, duration)) {
-    toast("Это время уже занято!", "error");
+    toast("Выбранное время уже занято", "error");
     return;
   }
 
@@ -564,7 +575,9 @@ window.selectTime = (time, el) => {
   nameInput?.focus();
 };
 
-// === forceUpdateClientSelect ===
+/**
+ * Принудительное обновление выпадающего списка услуг в модальном окне
+ */
 function forceUpdateClientSelect() {
   const select = document.getElementById("service");
   if (!select) return;
@@ -573,6 +586,8 @@ function forceUpdateClientSelect() {
     store.services.map(s => `<option value="${s.id}">${s.name} — ${s.price}₽ (${s.duration} мин)</option>`).join("");
 }
 
+// Экспорт основной функции
 export { updateGlobalMasterSelect };
 
-console.log("%cCOMPONENTS.JS — ГОТОВ. Выбор мастера сохраняется. Календарь обновляется при смене.", "color: lime; background: black; font-size: 48px; font-weight: bold");
+// Отладочное сообщение о успешной загрузке модуля (можно удалить в production)
+console.log("%cCOMPONENTS.JS — МОДУЛЬ ЗАГРУЖЕН И ГОТОВ К РАБОТЕ", "color: lime; background: black; font-size: 24px; font-weight: bold");
