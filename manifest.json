@@ -1,22 +1,23 @@
+
 {
   "name": "Василики • Маникюр",
   "short_name": "Василики",
   "description": "Онлайн-запись на маникюр в Москве — стерильно, быстро, удобно",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "background_color": "#fff5f7",
   "theme_color": "#c9a08a",
   "orientation": "portrait-primary",
   "display": "standalone",
-  "scope": "/",
+  "scope": "./",
   "icons": [
     {
-      "src": "/assets/icon-192.png",
+      "src": "./assets/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/icon-512.png",
+      "src": "./assets/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
