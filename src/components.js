@@ -60,46 +60,122 @@ const saveLastBookingData = (name, phone, serviceId) => {
 function updateGlobalMasterSelect() {
   const select = document.getElementById("globalMasterSelect");
   if (!select) {
-    console.warn("Селект #globalMasterSelect не найден в DOM");
+    console.warn("Селект #globalMasterSelect не найден, сука. Где он, блядь?");
     return;
   }
 
-  const currentValue = select.value;
+  const allowSelect = store.settings?.allowMasterSelect ?? true;
+  const hasMasters = store.masters?.length > 0;
 
-  let html = `<option value="">Общий график (все мастера)</option>`;
+  // Если выбор мастеров отключён или мастеров вообще нет — прячем всё нахуй
+  // Если выбор мастеров отключён или мастеров вообще нет — прячем всю хуйню нахуй
+// Прячем весь блок ТОЛЬКО если мастеров реально нет (store.masters.length === 0)
+const hasActiveMasters = store.masters?.length > 0;
 
-  if (store.settings?.allowMasterSelect && store.masters?.length > 0) {
-    const sortedMasters = [...store.masters].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-    html += sortedMasters.map(m => `<option value="${m.id}">${m.name}</option>`).join("");
-    select.style.display = "block";
-  } else {
-    select.style.display = "none";
+const container = document.getElementById("master-select-container");
+if (!container) {
+  console.warn("Контейнер #master-select-container не найден, но похуй продолжаем");
+}
+
+if (!hasActiveMasters) {
+  // Нет ни одного активного мастера — всё нахуй скрываем
+  if (container) container.style.display = "none";
+  select.style.display = "none"; // на всякий случай
+
+  window.selectedGlobalMasterId = null;
+  localStorage.removeItem('selectedMasterId');
+
+  console.log("%c[MASTER SELECT] Мастеров вообще нет → весь блок спрятан нахуй, как твой бывший в чёрном списке", 
+              "color: #ff4444; font-weight: bold; background: #000; padding: 4px 8px;");
+
+  // Рендерим календарь сразу в общем режиме
+  if (typeof window.renderCalendar === 'function') {
+    window.renderCalendar();
   }
+  
+  return; // дальше не ебёмся
+}
 
+// Если мастера есть — показываем контейнер независимо от allowMasterSelect
+if (container) container.style.display = "block";
+
+// Дальше обычная логика: если allowMasterSelect = false — делаем селект минимальным
+if (!allowSelect) {
+  select.innerHTML = '<option value="">Общий график (единственный вариант)</option>';
+  select.value = "";
+  window.selectedGlobalMasterId = null;
+  localStorage.removeItem('selectedMasterId');
+  
+  console.log("%c[MASTER SELECT] Выбор отключён в настройках → только общий график, мастеров не выбираем", 
+              "color: #ffcc00; font-weight: bold; background: #000; padding: 4px 8px;");
+} else {
+  // Полный селект с мастерами
+  const sortedMasters = [...store.masters].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  let html = `<option value="">Общий график (все мастера)</option>`;
+  html += sortedMasters.map(m => `<option value="${m.id}">${m.name}</option>`).join("");
   select.innerHTML = html;
 
-  // Восстанавливаем сохранённый выбор или используем текущий (если он ещё валиден)
-  const savedMasterId = localStorage.getItem('selectedMasterId');
-  if (savedMasterId && store.masters.some(m => m.id === savedMasterId)) {
-    select.value = savedMasterId;
-    window.selectedGlobalMasterId = savedMasterId;
-  } else if (currentValue && store.masters.some(m => m.id === currentValue)) {
-    select.value = currentValue;
-    window.selectedGlobalMasterId = currentValue;
+  // Восстанавливаем сохранённый выбор
+  const saved = localStorage.getItem('selectedMasterId');
+  if (saved && store.masters.some(m => m.id === saved)) {
+    select.value = saved;
+    window.selectedGlobalMasterId = saved;
   } else {
     select.value = "";
     window.selectedGlobalMasterId = null;
   }
 
-  // Сохраняем в localStorage при каждом обновлении
   localStorage.setItem('selectedMasterId', window.selectedGlobalMasterId || "");
+}
 
-  // Принудительно обновляем календарь после изменения
+console.log(`%c[MASTER SELECT] → выбран: ${window.selectedGlobalMasterId || 'Общий'} → рендерим`, 
+            "color: #00ff9d; font-weight: bold; background: #000; padding: 4px 8px;");
+
+// Финальный рендер календаря
+if (typeof window.renderCalendar === 'function') {
+  window.renderCalendar();
+}
+
+  // Если дошли сюда — мастера есть и выбор включён → показываем селект
+  select.style.display = "block";
+
+  // Сортируем мастеров по имени (русский порядок, чтоб не было пиздеца с "Я" после "А")
+  const sortedMasters = [...store.masters].sort((a, b) => 
+    a.name.localeCompare(b.name, 'ru')
+  );
+
+  let html = `<option value="">Общий график (все мастера)</option>`;
+  html += sortedMasters.map(m => 
+    `<option value="${m.id}">${m.name}</option>`
+  ).join("");
+
+  select.innerHTML = html;
+
+  // Пытаемся восстановить предыдущий выбор
+  const saved = localStorage.getItem('selectedMasterId');
+  let newSelected = null;
+
+  if (saved && store.masters.some(m => m.id === saved)) {
+    newSelected = saved;
+  } else {
+    // Если сохранённого нет или он больше не существует — сбрасываем в общий
+    newSelected = null;
+  }
+
+  select.value = newSelected || "";
+  window.selectedGlobalMasterId = newSelected;
+
+  // Сохраняем актуальный выбор (даже если null — чистим localStorage)
+  localStorage.setItem('selectedMasterId', newSelected || "");
+
+  console.log(`%c[MASTER SELECT] → выбран мастер: ${newSelected || 'Общий график'} → обновляем календарь`, 
+              'color: #00ff9d; font-weight: bold; background: #000; padding: 4px 8px;');
+
+  // Принудительный рендер календаря — без этого иногда календарь тупит
   if (typeof window.renderCalendar === 'function') {
-    console.log(`%c[updateGlobalMasterSelect] → мастер: ${window.selectedGlobalMasterId || 'Общий'} → вызываем renderCalendar`, 'color:#00ff9d; font-weight:bold; background:#000; padding:4px 8px;');
     window.renderCalendar();
   } else {
-    console.error("renderCalendar не доступен в window");
+    console.error("renderCalendar не найден в window, пиздец какой-то");
   }
 }
 
