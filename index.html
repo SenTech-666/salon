@@ -90,71 +90,78 @@
   </footer>
 
   <!-- Скрипт для ленивой загрузки карты 2GIS и обработки PWA -->
-   <script>
+<!-- Скрипт для PWA и сервис-воркера — теперь работает как надо -->
+<script>
+  // Регистрация сервис-воркера (обязательно для PWA)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/salon/sw.js')  // ← путь к твоему sw.js, если в /salon/
-        .then(reg => console.log('Service Worker зарегистрирован, господин! Теперь PWA встанет.', reg))
-        .catch(err => console.error('Service Worker не встал, сука: ', err));
+      navigator.serviceWorker.register('/salon/sw.js')  // ← УБЕДИСЬ, что путь правильный!
+        .then(reg => {
+          console.log('%cService Worker зарегистрирован, господин! PWA готова встать.', 'color: lime; font-weight: bold;');
+        })
+        .catch(err => {
+          console.error('Service Worker не встал, сука:', err);
+        });
     });
   }
-</script>
-  <script>
-    // Ленивая загрузка карты 2GIS только когда секция попадает в область видимости
-    document.addEventListener("DOMContentLoaded", () => {
-      const mapSection = document.querySelector('.map-section');
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) {
-          load2GIS();
-          observer.unobserve(mapSection);
-        }
-      }, { rootMargin: "300px" });
-      observer.observe(mapSection);
-    });
 
-    // Функция загрузки скрипта 2GIS и инициализации карты
-    function load2GIS() {
-      if (window.DG && typeof DG.map === 'function') {
-        initMap();
-        return;
+  // Ленивая загрузка карты 2GIS (оставляем как было, но чище)
+  document.addEventListener("DOMContentLoaded", () => {
+    const mapSection = document.querySelector('.map-section');
+    if (!mapSection) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        load2GIS();
+        observer.unobserve(mapSection);
       }
+    }, { rootMargin: "300px" });
 
-      const script = document.createElement('script');
-      script.src = "https://maps.api.2gis.ru/2.0/loader.js?pkg=full";
-      script.async = true;
+    observer.observe(mapSection);
+  });
 
-      script.onload = () => {
-        const waitForDG = setInterval(() => {
-          if (window.DG && DG.map) {
-            clearInterval(waitForDG);
-            initMap();
-          }
-        }, 100);
-
-        setTimeout(() => clearInterval(waitForDG), 8000);
-      };
-
-      script.onerror = showFallback;
-      document.head.appendChild(script);
+  function load2GIS() {
+    if (window.DG && typeof DG.map === 'function') {
+      initMap();
+      return;
     }
 
-    // Инициализация карты с маркером
-    function initMap() {
-      DG.map('dgis-map', {
-        center: [55.7558, 37.6173],   // ← Замените на реальные координаты салона
-        zoom: 16,
-        scrollWheelZoom: false
-      }).then(map => {
-        DG.marker([55.7558, 37.6173])
-          .addTo(map)
-          .bindPopup('Василики • Маникюр в Москве')
-          .openPopup();
-      }).catch(showFallback);
-    }
+    const script = document.createElement('script');
+    script.src = "https://maps.api.2gis.ru/2.0/loader.js?pkg=full";
+    script.async = true;
 
-    // Фоллбэк на случай ошибки загрузки карты
-    function showFallback() {
-      document.getElementById('dgis-map').innerHTML = `
+    script.onload = () => {
+      const waitForDG = setInterval(() => {
+        if (window.DG && DG.map) {
+          clearInterval(waitForDG);
+          initMap();
+        }
+      }, 100);
+
+      setTimeout(() => clearInterval(waitForDG), 8000);
+    };
+
+    script.onerror = showFallback;
+    document.head.appendChild(script);
+  }
+
+  function initMap() {
+    DG.map('dgis-map', {
+      center: [55.7558, 37.6173],  // ← ПОМЕНЯЙ НА СВОИ КООРДИНАТЫ!
+      zoom: 16,
+      scrollWheelZoom: false
+    }).then(map => {
+      DG.marker([55.7558, 37.6173])
+        .addTo(map)
+        .bindPopup('Василики • Маникюр в Москве')
+        .openPopup();
+    }).catch(showFallback);
+  }
+
+  function showFallback() {
+    const mapEl = document.getElementById('dgis-map');
+    if (mapEl) {
+      mapEl.innerHTML = `
         <div style="height:520px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#faf8f5;color:#6b5b5b;font-size:1.5rem;border-radius:32px;padding:40px;text-align:center;">
           <div style="font-size:5rem;margin-bottom:20px">📍</div>
           <div>Москва, ул. Ленина, д.25</div>
@@ -164,20 +171,34 @@
         </div>
       `;
     }
+  }
 
-    // Обработка события установки PWA-приложения
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', e => {
-      e.preventDefault();
-      deferredPrompt = e;
-      document.getElementById('installButton').style.display = 'block';
-    });
+  // PWA — кнопка установки
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', e => {
+    console.log('%cPWA готово к установке, господин! Кнопка покажется.', 'color: gold; font-weight: bold;');
+    e.preventDefault();
+    deferredPrompt = e;
+    const installBtn = document.getElementById('installButton');
+    if (installBtn) installBtn.style.display = 'block';
+  });
 
-    document.getElementById('installButton').onclick = () => {
-      document.getElementById('installButton').style.display = 'none';
+  // Обработчик клика по кнопке установки
+  document.addEventListener('click', e => {
+    if (e.target.id === 'installButton' && deferredPrompt) {
+      e.target.style.display = 'none';
       deferredPrompt.prompt();
-    };
-  </script>
+      deferredPrompt.userChoice.then(choice => {
+        if (choice.outcome === 'accepted') {
+          console.log('%cПиздец, приложение установлено! Господин, ты красавчик.', 'color: lime; font-size: 20px;');
+        } else {
+          console.log('Пользователь сказал "пошёл нахуй" установке');
+        }
+        deferredPrompt = null;
+      });
+    }
+  });
+</script>
   
 
 </body>
