@@ -92,102 +92,21 @@
   <!-- Скрипт для ленивой загрузки карты 2GIS и обработки PWA -->
 <!-- Скрипт для PWA и сервис-воркера — теперь работает как надо -->
 <script>
-
-// Регистрация SW
+  // 1. Регистрация сервис-воркера (обязательно для PWA)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('%cSW зарегистрирован, PWA готова!', 'color:lime;font-weight:bold;'))
-        .catch(err => console.error('SW не встал:', err));
+        .then(reg => console.log('%cSW зарегистрирован, PWA готова встать!', 'color:lime;font-weight:bold;'))
+        .catch(err => console.error('SW не встал, сука:', err));
     });
   }
 
-  // Ленивая загрузка карты 2GIS
-  document.addEventListener("DOMContentLoaded", () => {
-    const mapSection = document.querySelector('.map-section');
-    if (mapSection) {
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) {
-          load2GIS();
-          observer.unobserve(mapSection);
-        }
-      }, { rootMargin: "300px" });
-      observer.observe(mapSection);
-    }
-  });
-
-  function load2GIS() {
-    if (window.DG && DG.map) return initMap();
-
-    const script = document.createElement('script');
-    script.src = "https://maps.api.2gis.ru/2.0/loader.js?pkg=full";
-    script.async = true;
-    script.onload = () => {
-      const wait = setInterval(() => {
-        if (window.DG && DG.map) {
-          clearInterval(wait);
-          initMap();
-        }
-      }, 100);
-      setTimeout(() => clearInterval(wait), 8000);
-    };
-    script.onerror = showFallback;
-    document.head.appendChild(script);
-  }
-
-  function initMap() {
-    DG.map('dgis-map', {
-      center: [55.7558, 37.6173],
-      zoom: 16,
-      scrollWheelZoom: false
-    }).then(map => {
-      DG.marker([55.7558, 37.6173])
-        .addTo(map)
-        .bindPopup('Василики • Маникюр в Москве')
-        .openPopup();
-    }).catch(showFallback);
-  }
-
-  function showFallback() {
-    document.getElementById('dgis-map').innerHTML = `
-      <div style="height:520px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#faf8f5;color:#6b5b5b;font-size:1.5rem;border-radius:32px;padding:40px;text-align:center;">
-        <div style="font-size:5rem;margin-bottom:20px">📍</div>
-        <div>Москва, ул. Ленина, д.25</div>
-        <div style="margin-top:16px;font-size:1.1rem;color:#8a6f5b">
-          Карта временно недоступна<br>Но я жду вас по этому адресу ❤️
-        </div>
-      </div>
-    `;
-  }
-
-  // PWA установка
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    deferredPrompt = e;
-    document.getElementById('installButton').style.display = 'block';
-    console.log('%cPWA готово к установке!', 'color:gold; font-weight:bold;');
-  });
-
-  document.getElementById('installButton').addEventListener('click', () => {
-    const btn = document.getElementById('installButton');
-    btn.style.display = 'none';
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(choice => {
-      if (choice.outcome === 'accepted') {
-        console.log('%cПриложение установлено, господин!', 'color:lime; font-size:20px;');
-      } else {
-        console.log('Установка отменена');
-      }
-      deferredPrompt = null;
-    });
-  });
-  // Ленивая загрузка карты 2GIS (оставляем как было, но чище)
+  // 2. Ленивая загрузка карты 2GIS
   document.addEventListener("DOMContentLoaded", () => {
     const mapSection = document.querySelector('.map-section');
     if (!mapSection) return;
 
-    const observer = new IntersectionObserver((entries) => {
+    const observer = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting) {
         load2GIS();
         observer.unobserve(mapSection);
@@ -198,24 +117,20 @@
   });
 
   function load2GIS() {
-    if (window.DG && typeof DG.map === 'function') {
-      initMap();
-      return;
-    }
+    if (window.DG && DG.map) return initMap();
 
     const script = document.createElement('script');
     script.src = "https://maps.api.2gis.ru/2.0/loader.js?pkg=full";
     script.async = true;
 
     script.onload = () => {
-      const waitForDG = setInterval(() => {
+      const wait = setInterval(() => {
         if (window.DG && DG.map) {
-          clearInterval(waitForDG);
+          clearInterval(wait);
           initMap();
         }
       }, 100);
-
-      setTimeout(() => clearInterval(waitForDG), 8000);
+      setTimeout(() => clearInterval(wait), 8000);
     };
 
     script.onerror = showFallback;
@@ -250,18 +165,26 @@
     }
   }
 
+  // 3. PWA — установка приложения
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', e => {
+    console.log('%cPWA готово к установке, господин!', 'color:gold;font-weight:bold;');
+    e.preventDefault();
+    deferredPrompt = e;
+    const btn = document.getElementById('installButton');
+    if (btn) btn.style.display = 'block';
+  });
 
-
-  // Обработчик клика по кнопке установки
+  // Обработчик кнопки установки (делегирование, чтоб работало даже если кнопка добавлена позже)
   document.addEventListener('click', e => {
     if (e.target.id === 'installButton' && deferredPrompt) {
       e.target.style.display = 'none';
       deferredPrompt.prompt();
       deferredPrompt.userChoice.then(choice => {
         if (choice.outcome === 'accepted') {
-          console.log('%cПиздец, приложение установлено! Господин, ты красавчик.', 'color: lime; font-size: 20px;');
+          console.log('%cПриложение установлено, господин! Ты красавчик.', 'color:lime;font-size:18px;');
         } else {
-          console.log('Пользователь сказал "пошёл нахуй" установке');
+          console.log('Установка отменена, ну и хуй с ним');
         }
         deferredPrompt = null;
       });
