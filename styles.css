@@ -651,10 +651,7 @@ body {
    ========================================================================== */
 
 /* Убираем текст статусов на всех экранах */
-.status,
-.day .status {
-  display: none !important;
-}
+
 
 /* Резиновые переменные */
 :root {
@@ -675,17 +672,7 @@ body {
 }
 
 /* Грид календаря и дней недели */
-.weekdays,
-#calendar {
-  width: 100%;
-  max-width: 100%;
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: var(--gap);
-  justify-content: center;
-  overflow-x: hidden;
-  box-sizing: border-box;
-}
+
 
 /* Ячейки — строго квадратные, числа по центру */
 .day {
@@ -781,6 +768,13 @@ body {
 
 /* Ультра-маленькие экраны */
 @media (max-width: 420px) {
+  .status,
+.day .status 
+{
+  display: none !important;
+}
+.day {
+  aspect-ratio: 1 / 1; }
   .modal {
     padding: 40px 16px 140px 16px;
     max-height: calc(100vh - 60px);
@@ -802,6 +796,9 @@ body {
 
 /* Safe-area для iOS */
 @supports (padding: env(safe-area-inset-bottom)) {
+
+.day {
+  aspect-ratio: 1 / 1; }
   .modal {
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 40px));
   }
@@ -813,6 +810,12 @@ body {
 
 /* Клавиатура открыта */
 @media (max-width: 768px) and (orientation: portrait) {
+  .status,
+.day .status {
+  display: none !important;
+}
+.day {
+  aspect-ratio: 1 / 1; }
   .modal:focus-within {
     padding-bottom: 80px !important;
   }
@@ -820,6 +823,12 @@ body {
 
 /* Планшеты — квадратные ячейки, без прокрутки */
 @media (min-width: 768px) and (max-width: 1024px) {
+  .status,
+.day .status {
+  display: none !important;
+}
+.day {
+  aspect-ratio: 1 / 1; }
   :root {
     --cell: calc((100vw - 60px - 6 * 12px) / 7);
     --gap: 12px;
