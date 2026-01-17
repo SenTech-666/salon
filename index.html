@@ -95,7 +95,7 @@
   // Регистрация сервис-воркера (обязательно для PWA)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/salon/sw.js')  // ← УБЕДИСЬ, что путь правильный!
+      navigator.serviceWorker.register('/sw.js')  // ← УБЕДИСЬ, что путь правильный!
         .then(reg => {
           console.log('%cService Worker зарегистрирован, господин! PWA готова встать.', 'color: lime; font-weight: bold;');
         })
