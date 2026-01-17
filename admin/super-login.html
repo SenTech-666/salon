@@ -55,7 +55,7 @@
 
     // Если уже залогинен как супер-админ — сразу кидаем в админку
     onAuthStateChanged(auth, (user) => {
-      if (user && user.email === "admin@vasiliki.ru") {
+      if (user && user.email === "prointeres07@gmail.com") {
         localStorage.setItem("superAdminAuth", "true");
         location.href = "admin.html";
       }

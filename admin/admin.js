@@ -271,16 +271,16 @@ function renderBookings() {
   const dateFilter = document.getElementById("filter-date")?.value || '';
   const masterFilter = document.getElementById("filter-master")?.value || '';
 
-  let filtered = bookingsData;
+  let filtered = [...bookingsData]; // всегда работаем с копией, чтоб не ебать оригинал
 
-  // Сначала применяем фильтр по мастеру (самое важное)
+  // 1. Фильтр по мастеру (самый жёсткий, всегда первый)
   if (masterFilter) {
     filtered = filtered.filter(b => b.masterId === masterFilter);
-  } else if (currentMaster) {
+  } else if (currentMaster?.id) {
     filtered = filtered.filter(b => b.masterId === currentMaster.id);
   }
 
-  // Потом поиск
+  // 2. Поиск по имени/телефону/услуге
   if (search) {
     filtered = filtered.filter(b =>
       (b.clientName?.toLowerCase().includes(search) ||
@@ -289,32 +289,50 @@ function renderBookings() {
     );
   }
 
-  // Теперь вкладка по датам — применяется уже к отфильтрованному списку мастера
-  const today = new Date().toISOString().slice(0, 10);
-  const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+  // 3. Теперь вкладки — применяем их ТОЛЬКО если НЕ выбран конкретный dateFilter
+  // (иначе dateFilter имеет приоритет — так логичнее для админа)
+  const todayStr = new Date().toISOString().slice(0, 10); // "2026-01-17"
 
-  if (currentTab === 'today') {
-    filtered = filtered.filter(b => b.date === today);
-  } else if (currentTab === 'month') {
-    filtered = filtered.filter(b => b.date >= firstDayOfMonth && b.date <= today);
-  } else if (currentTab === 'history') {
-    filtered = filtered.filter(b => b.date < today);
+  if (!dateFilter) {
+    if (currentTab === 'today') {
+      filtered = filtered.filter(b => b.date === todayStr);
+      // adminToast.info("Только сегодня, господин!"); // если хочешь
+    } 
+    else if (currentTab === 'month') {
+      const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+        .toISOString().slice(0, 10);
+      const lastDay = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+        .toISOString().slice(0, 10);
+
+      filtered = filtered.filter(b => b.date >= firstDay && b.date <= lastDay);
+    } 
+    else if (currentTab === 'history') {
+      // История = всё до сегодняшнего дня ВКЛЮЧИТЕЛЬНО (или убери <= todayStr, если хочешь только строго прошлое)
+      filtered = filtered.filter(b => b.date <= todayStr);
+    }
+    // 'all' — ничего не фильтруем по датам
   }
 
-  // Конкретная дата из календаря — в последнюю очередь
+  // 4. Конкретная дата из календаря — самый сильный фильтр, перебивает вкладки
   if (dateFilter) {
     filtered = filtered.filter(b => b.date === dateFilter);
   }
 
+  // Обновляем счётчик
   document.getElementById("count").textContent = filtered.length;
 
-  // ... остальной код рендера списка без изменений ...
+  // Сортируем от новых к старым (по дате + времени)
+  filtered.sort((a, b) => {
+    const da = new Date(a.date + 'T' + (a.time || '00:00:00'));
+    const db = new Date(b.date + 'T' + (b.time || '00:00:00'));
+    return db - da; // новые сверху
+  });
 
-
+  // Рендер списка
   const list = document.getElementById("bookings-list");
   list.innerHTML = filtered.length === 0
     ? `<p style="text-align:center;color:#aaa;padding:80px 20px;font-size:1.5rem;">
-         ${currentMaster ? 'Записей нет.<br>Отдыхай, король' : 'Нет записей'}
+         ${currentMaster ? 'Записей нет.<br>Отдыхай, король' : 'Нет записей, сука :('}
        </p>`
     : filtered.map(b => {
         const service = window.servicesList.find(s => s.id === b.serviceId);
@@ -329,12 +347,12 @@ function renderBookings() {
                    style="width:20px;height:20px;">
             <div onclick="openBookingModal('${b.id}')" style="flex:1;">
               <div style="display:flex;justify-content:space-between;align-items:center;">
-                <strong style="font-size:1.3rem;color:var(--accent);">${b.clientName || 'Клиент'}</strong>
+                <strong style="font-size:1.3rem;color:var(--accent);">${b.clientName || 'Анонимный пиздец'}</strong>
                 <span style="color:#777;font-size:0.95rem;">${b.date} • ${b.time}</span>
               </div>
               <div style="margin-top:6px;color:#555;">
                 ${b.clientPhone ? `<span style="color:#a67c52;">${b.clientPhone}</span> • ` : ''}
-                ${service?.name || 'Услуга'} (${service?.price || '?'}₽) • 
+                ${service?.name || '???'} (${service?.price || '?'}₽) • 
                 <span style="color:#777;">Мастер: ${masterName}</span>
               </div>
             </div>
@@ -409,29 +427,41 @@ const safeToast = (msg, type = 'info') => {
 // Сама функция удаления — вставь это вместо старой
 window.deleteSelectedBookings = async () => {
   if (selectedBookings.size === 0) {
-    adminToast('Да выбери хоть одну запись, милорд Coventry!', "warning");
+    adminToast('Выбери хоть одну запись, милорд из Coventry, а то как-то грустно', "warning");
     return;
   }
 
-  if (!confirm(`Ты реально хочешь нахуй удалить ${selectedBookings.size} записей?`)) return;
+  if (!confirm(`Нахуй ${selectedBookings.size} записей? Это необратимо, господин!`)) return;
 
-  const batch = writeBatch(db);
-  selectedBookings.forEach(id => batch.delete(doc(db, "bookings", id)));
+  adminToast(`Начинаем удаление ${selectedBookings.size} записей...`, "info");
 
-  try {
-    await batch.commit();
-    adminToast(`Удалено ${selectedBookings.size} записей. Красота! 💅`, "success");
-    selectedBookings.clear();
-    updateMassActionButtons();
-    renderBookings();
-  } catch (err) {
-    console.error('Пиздец при удалении:', err);
-    if (err.code === 'permission-denied') {
-      adminToast('Нет прав, мудак. Проверь логин', "error");
-    } else {
-      adminToast(`Ошибка: ${err.message || err}`, "error");
+  const idsToDelete = [...selectedBookings]; // фиксируем копию, чтоб не мутировать во время итерации
+
+  let successCount = 0;
+  let failed = [];
+
+  for (const id of idsToDelete) {
+    try {
+      await deleteDoc(doc(db, "bookings", id));
+      successCount++;
+      selectedBookings.delete(id); // сразу убираем из выбранных
+    } catch (err) {
+      console.error(`Ошибка удаления записи ${id}:`, err);
+      failed.push(id);
     }
   }
+
+  if (successCount > 0) {
+    adminToast(`Успешно удалено ${successCount} записей. Красота! 💅`, "success");
+  }
+
+  if (failed.length > 0) {
+    adminToast(`Не удалось удалить ${failed.length} записей. Смотри консоль, мудила`, "error");
+  }
+
+  selectedBookings.clear(); // на всякий случай
+  updateMassActionButtons();
+  renderBookings(); // перерисуем список
 };
 
 // === МАССОВЫЙ ПЕРЕНОС (заглушка с планом на будущее) ===
