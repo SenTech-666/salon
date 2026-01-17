@@ -90,6 +90,15 @@
   </footer>
 
   <!-- Скрипт для ленивой загрузки карты 2GIS и обработки PWA -->
+   <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/salon/sw.js')  // ← путь к твоему sw.js, если в /salon/
+        .then(reg => console.log('Service Worker зарегистрирован, господин! Теперь PWA встанет.', reg))
+        .catch(err => console.error('Service Worker не встал, сука: ', err));
+    });
+  }
+</script>
   <script>
     // Ленивая загрузка карты 2GIS только когда секция попадает в область видимости
     document.addEventListener("DOMContentLoaded", () => {
@@ -169,15 +178,7 @@
       deferredPrompt.prompt();
     };
   </script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/salon/sw.js')  // ← путь к твоему sw.js, если в /salon/
-        .then(reg => console.log('Service Worker зарегистрирован, господин! Теперь PWA встанет.', reg))
-        .catch(err => console.error('Service Worker не встал, сука: ', err));
-    });
-  }
-</script>
+  
 
 </body>
 </html>
