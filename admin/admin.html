@@ -58,28 +58,41 @@
   </div>
 
   <!-- ЗАПИСИ -->
-  <div class="card">
-    <h2>Записи <span style="font-size:1rem;color:var(--text-light);font-weight:normal;">(всего: <span id="count">0</span>)</span></h2>
-    
-    <!-- ФИЛЬТРЫ И ПОИСК -->
-    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;">
-      <form autocomplete="off" style="display:contents;"><input type="text" class="input" id="search" placeholder="Поиск по имени, телефону или услуге..." oninput="renderBookings()"  ></form>
-      
-      <input type="date" class="input" id="filter-date" onchange="renderBookings()">
-      <select id="filter-master" class="input" onchange="renderBookings()">
-        <option value="">Все мастера</option>
-      </select>
-    </div>
-
-    <!-- КНОПКИ МАССОВЫХ ДЕЙСТВИЙ -->
-    <div style="margin:16px 0; display:flex; gap:16px; flex-wrap:wrap;">
-      <button class="btn btn-danger" id="delete-selected" onclick="deleteSelectedBookings()" disabled>Удалить выбранные</button>
-      <button class="btn" id="transfer-selected" onclick="transferSelectedBookings()" disabled>Перенести выбранные</button>
-    </div>
-
-    <!-- СПИСОК ЗАПИСЕЙ -->
-    <div id="bookings-list" class="grid"></div>
+ <!-- ЗАПИСИ -->
+<div class="card" id="bookings-card">
+  <h2>Записи</h2>
+  
+  <!-- Вкладки -->
+  <div class="tabs" style="display:flex;gap:12px;margin-bottom:20px;">
+    <button class="btn" onclick="switchTab('all')" id="tab-all">Все</button>
+    <button class="btn" onclick="switchTab('today')" id="tab-today">Сегодня</button>
+    <button class="btn" onclick="switchTab('month')" id="tab-month">Месяц</button>
+    <button class="btn" onclick="switchTab('history')" id="tab-history">История</button>
   </div>
+
+  <!-- Фильтры -->
+  <div style="display:flex;gap:16px;align-items:flex-end;margin-bottom:24px;">
+    <form autocomplete="off" style="display:contents;"><input type="text" class="input" id="search" placeholder="Поиск по имени, телефону или услуге..." autocomplete="off" name="search-field-dont-autofill"></form>
+    <input type="date" class="input" id="filter-date" style="width:180px;">
+    <select class="input" id="filter-master" style="width:200px;">
+      <option value="">Все мастера</option>
+      <!-- Заполняется JS -->
+    </select>
+    <button class="btn" onclick="applyFilters()">Применить</button>
+    <button class="btn btn-warning" onclick="clearFilters()">Очистить</button>
+  </div>
+
+  <p style="color:var(--text-light);margin-bottom:16px;">
+    Всего записей: <span id="count">0</span>
+  </p>
+
+  <div id="bookings-list" class="grid mt-20"></div>
+
+  <div style="display:flex;gap:12px;margin-top:32px;">
+    <button class="btn btn-danger" id="delete-selected" disabled onclick="deleteSelectedBookings()">Удалить выбранные</button>
+    <button class="btn btn-warning" id="transfer-selected" disabled onclick="transferSelectedBookings()">Массовый перенос</button>
+  </div>
+</div>
 
   <!-- КАЛЕНДАРЬ БЛОКИРОВКИ -->
   <div class="card">

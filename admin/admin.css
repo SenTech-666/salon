@@ -1,4 +1,4 @@
-/* styles.css — ЕДИНЫЙ СТИЛЬ ВАСИЛИКИ 2025 */
+/* styles.css — ЕДИНЫЙ СТИЛЬ ВАСИЛИКИ 2025, адаптировано для админки 2026 */
 :root {
   --bg: #faf8f5;
   --card: #ffffff;
@@ -66,7 +66,6 @@ h2 { font-size:2.4rem; margin-bottom:28px; }
 .mb-40 { margin-bottom:40px; }
 
 .modal {
-  display: none;
   position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:9999;
 }
 .modal.show { display:flex; }
@@ -208,3 +207,27 @@ input:checked + .slider:before {
 .admin-toast.error   { background: #ff5252 !important; }
 .admin-toast.warning { background: #ff9800 !important; }
 .admin-toast.info    { background: #2196f3 !important; }
+
+.tabs .btn {
+  background: #e8e2db;  /* серый, неактивный */
+  color: #3c2f2f;
+  box-shadow: none;
+}
+
+.tabs .btn.active {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 6px 20px rgba(201,160,138,0.3);
+}
+
+/* Адаптация для мобильки — чтоб не ломалось */
+@media (max-width: 768px) {
+  .container { padding:20px 10px; }
+  .card { padding:24px; }
+  .btn { padding:12px 24px; font-size:1rem; }
+  .input { padding:14px; font-size:1rem; }
+  h1 { font-size:2.5rem; }
+  h2 { font-size:2rem; }
+  .tabs { flex-wrap: wrap; gap:8px; }
+  .tabs .btn { padding:10px 20px; font-size:0.95rem; }
+}

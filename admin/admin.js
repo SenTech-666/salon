@@ -30,6 +30,7 @@ const SUPER_ADMIN_EMAILS = [
 ];
 
 let selectedBookings = new Set(); // для массовых действий
+let currentTab = 'all'; // по умолчанию все записи
 
 // === ВСТРОЕННЫЙ ТОАСТ ДЛЯ АДМИНКИ — ЧТОБЫ НЕ ЕБАТЬСЯ С ИМПОРТАМИ ===
 const adminToast = (message, type = "info", duration = 4000) => {
@@ -272,6 +273,14 @@ function renderBookings() {
 
   let filtered = bookingsData;
 
+  // Сначала применяем фильтр по мастеру (самое важное)
+  if (masterFilter) {
+    filtered = filtered.filter(b => b.masterId === masterFilter);
+  } else if (currentMaster) {
+    filtered = filtered.filter(b => b.masterId === currentMaster.id);
+  }
+
+  // Потом поиск
   if (search) {
     filtered = filtered.filter(b =>
       (b.clientName?.toLowerCase().includes(search) ||
@@ -280,17 +289,27 @@ function renderBookings() {
     );
   }
 
+  // Теперь вкладка по датам — применяется уже к отфильтрованному списку мастера
+  const today = new Date().toISOString().slice(0, 10);
+  const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+
+  if (currentTab === 'today') {
+    filtered = filtered.filter(b => b.date === today);
+  } else if (currentTab === 'month') {
+    filtered = filtered.filter(b => b.date >= firstDayOfMonth && b.date <= today);
+  } else if (currentTab === 'history') {
+    filtered = filtered.filter(b => b.date < today);
+  }
+
+  // Конкретная дата из календаря — в последнюю очередь
   if (dateFilter) {
     filtered = filtered.filter(b => b.date === dateFilter);
   }
 
-  if (masterFilter) {
-    filtered = filtered.filter(b => b.masterId === masterFilter);
-  } else if (currentMaster) {
-    filtered = filtered.filter(b => b.masterId === currentMaster.id);
-  }
-
   document.getElementById("count").textContent = filtered.length;
+
+  // ... остальной код рендера списка без изменений ...
+
 
   const list = document.getElementById("bookings-list");
   list.innerHTML = filtered.length === 0
@@ -324,7 +343,6 @@ function renderBookings() {
 
   updateMassActionButtons();
 }
-
 function toggleBookingSelection(id, checked) {
   if (checked) {
     selectedBookings.add(id);
@@ -333,6 +351,29 @@ function toggleBookingSelection(id, checked) {
   }
   updateMassActionButtons();
 }
+// === ФУНКЦИИ ФИЛЬТРОВ И ВКЛАДОК ===
+window.applyFilters = () => {
+  renderBookings();
+  adminToast("Фильтры применены, красота!", "success");
+};
+
+window.clearFilters = () => {
+  document.getElementById("search").value = "";
+  document.getElementById("filter-date").value = "";
+  document.getElementById("filter-master").value = "";
+  renderBookings();
+  adminToast("Фильтры очищены, всё заново!", "info");
+};
+
+window.switchTab = (tab) => {
+  currentTab = tab;
+  
+  // Подсветка активной вкладки (опционально, для красоты)
+  document.querySelectorAll('.tabs .btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`tab-${tab}`)?.classList.add('active');
+
+  renderBookings();
+};
 window.toggleBookingSelection = toggleBookingSelection;
 
 function updateMassActionButtons() {
