@@ -894,3 +894,44 @@ body {
     max-width: 100vw;
   }
 }
+
+/* ==========================================================================
+   ЦЕНТРИРОВАНИЕ МОДАЛКИ НА ДЕСКТОПЕ (без изменения мобильного поведения)
+   ========================================================================== */
+@media (min-width: 769px) {
+  .modal-backdrop {
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal {
+    width: 92%;
+    max-width: 500px;
+    min-height: auto;
+    max-height: 90vh;
+    margin: auto;
+    border-radius: var(--radius);
+    padding: 44px 36px;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: auto;
+    background: var(--accent);
+    backdrop-filter: none;
+  }
+
+  .modal .action-buttons {
+    position: relative;
+    bottom: auto;
+    margin: 32px -36px -44px -36px;
+    padding: 24px 36px;
+    box-shadow: none;
+    border-top: 1px solid var(--border);
+  }
+}
