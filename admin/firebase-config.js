@@ -97,7 +97,7 @@ window.firebaseSignOut = async () => {
     await signOut(auth);
     localStorage.removeItem("superAdminAuth");
     localStorage.removeItem("masterAuth");
-    location.href = "super-login.html";
+    location.href = "login.html";
   } catch (e) { console.error(e); }
 };
 

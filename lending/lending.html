@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wavywarm — Запись на всё бьюти в Ковентри</title>
+  <meta name="description" content="Барбер, массаж, ногти, волосы, брови, воск — всё в одном месте. Без звонков, без очередей."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #ff8c66;
+      --primary-dark: #e66d4d;
+      --bg: #fffaf5;
+      --text: #2d1e12;
+      --accent: #4a2c1a;
+      --glass: rgba(255,255,255,0.3);
+      --shadow: 0 24px 72px rgba(255,140,102,0.35);
+      --radius: 48px;
+      --wave1: rgba(255,140,102,0.15);
+      --wave2: rgba(255,107,77,0.12);
+      --wave3: rgba(255,170,130,0.1);
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* Курсор-волна */
+    .cursor {
+      position: fixed;
+      width: 28px;
+      height: 28px;
+      background: rgba(255,140,102,0.45);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transition: transform 0.15s ease-out, background 0.3s;
+      mix-blend-mode: difference;
+    }
+
+    .cursor.grow { transform: scale(2.5); background: rgba(255,140,102,0.8); }
+
+    .cursor::after {
+      content: '';
+      position: absolute;
+      inset: -20px;
+      border: 2px solid var(--primary);
+      border-radius: 50%;
+      animation: ripple 1.8s infinite;
+      opacity: 0.6;
+    }
+
+    @keyframes ripple {
+      0% { transform: scale(0.5); opacity: 0.8; }
+      100% { transform: scale(3); opacity: 0; }
+    }
+
+    /* Фон с многослойным параллаксом */
+    .parallax-bg {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, var(--bg) 0%, #ffe8d9 50%, #ffd9c2 100%);
+      z-index: -3;
+    }
+
+    .wave {
+      position: fixed;
+      inset: -150%;
+      background: radial-gradient(circle, var(--wave1) 0%, transparent 70%);
+      z-index: -2;
+      animation: wave-slow 60s infinite linear;
+    }
+
+    .wave2 {
+      background: radial-gradient(circle, var(--wave2) 0%, transparent 70%);
+      animation: wave-medium 45s infinite linear reverse;
+    }
+
+    .wave3 {
+      background: radial-gradient(circle, var(--wave3) 0%, transparent 70%);
+      animation: wave-fast 30s infinite linear;
+    }
+
+    @keyframes wave-slow { 0% { transform: translate(0,0) rotate(0deg); } 100% { transform: translate(60%,50%) rotate(360deg); } }
+    @keyframes wave-medium { 0% { transform: translate(0,0) rotate(0deg); } 100% { transform: translate(-50%,-40%) rotate(-360deg); } }
+    @keyframes wave-fast { 0% { transform: translate(0,0) rotate(0deg); } 100% { transform: translate(70%,60%) rotate(720deg); } }
+
+    /* Анимации */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(100px) scale(0.9); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+
+    .animate { opacity: 0; animation: fadeInUp 1.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+    /* Sticky Navbar */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      backdrop-filter: blur(20px);
+      background: rgba(255,250,245,0.6);
+      border-bottom: 1px solid rgba(255,140,102,0.2);
+      padding: 24px 0;
+      transition: all 0.4s;
+    }
+
+    nav h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.5rem;
+      color: var(--primary);
+      text-align: center;
+      margin: 0;
+    }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      text-align: center;
+      padding: 280px 40px 180px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      z-index: 1;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(7rem, 18vw, 15rem);
+      font-weight: 900;
+      color: var(--primary);
+      letter-spacing: -10px;
+      line-height: 0.7;
+      margin-bottom: 40px;
+    }
+
+    .subtitle {
+      font-size: clamp(3rem, 8vw, 5rem);
+      color: var(--accent);
+      font-weight: 900;
+      margin-bottom: 72px;
+    }
+
+    .big-text {
+      font-size: clamp(1.8rem, 5vw, 2.6rem);
+      max-width: 1100px;
+      margin: 0 auto 120px;
+      color: #4a2c1a;
+      font-weight: 700;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 60px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 120px 0 160px;
+    }
+
+    button {
+      padding: 28px 80px;
+      border-radius: var(--radius);
+      font-size: 1.8rem;
+      font-weight: 900;
+      cursor: none;
+      transition: all 0.6s cubic-bezier(0.23,1,0.32,1);
+      backdrop-filter: blur(20px);
+      border: none;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .primary, .big-primary {
+      background: linear-gradient(45deg, var(--primary) 0%, #ff6b4d 100%);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.5);
+    }
+
+    .primary:hover, .big-primary:hover {
+      transform: translateY(-20px) scale(1.08);
+      box-shadow: 0 60px 140px rgba(255,140,102,0.7);
+    }
+
+    .primary::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(255,255,255,0.4);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: width 0.8s, height 0.8s;
+      pointer-events: none;
+    }
+
+    .primary:active::before {
+      width: 600px;
+      height: 600px;
+    }
+
+    .secondary {
+      background: rgba(255,255,255,0.25);
+      border: 3px solid var(--primary);
+      color: var(--primary);
+      backdrop-filter: blur(30px);
+    }
+
+    .secondary:hover {
+      background: rgba(255,140,102,0.4);
+      color: white;
+      transform: translateY(-20px);
+    }
+
+    .trust-badges {
+      display: flex;
+      gap: 80px;
+      justify-content: center;
+      flex-wrap: wrap;
+      font-size: 1.6rem;
+      color: #6b5b5b;
+      font-weight: 900;
+      backdrop-filter: blur(16px);
+      padding: 28px 80px;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.25);
+      border: 2px solid rgba(255,140,102,0.4);
+    }
+
+    /* Pain points */
+    .pain-points {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 180px 40px;
+      text-align: center;
+      background: rgba(255,255,255,0.4);
+      backdrop-filter: blur(40px);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 2px solid rgba(255,140,102,0.3);
+    }
+
+    .pain-points h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 6.5rem;
+      color: var(--accent);
+      margin-bottom: 100px;
+    }
+
+    .pain-points ul {
+      list-style: none;
+      font-size: 1.8rem;
+      max-width: 1000px;
+      margin: 0 auto 80px;
+    }
+
+    .pain-points li {
+      margin-bottom: 40px;
+      color: #4a2c1a;
+    }
+
+    .after {
+      font-size: 3.8rem;
+      font-weight: 900;
+      color: var(--primary);
+    }
+
+    /* Features */
+    .features {
+      padding: 200px 40px;
+      text-align: center;
+      position: relative;
+    }
+
+    .features h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 6.8rem;
+      margin-bottom: 140px;
+      color: var(--accent);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 64px;
+    }
+
+    .grid div {
+      background: rgba(255,250,245,0.8);
+      backdrop-filter: blur(30px);
+      padding: 72px 64px;
+      border-radius: var(--radius);
+      font-size: 1.8rem;
+      font-weight: 900;
+      box-shadow: var(--shadow);
+      transition: all 0.6s cubic-bezier(0.23,1,0.32,1);
+      border: 2px solid rgba(255,140,102,0.3);
+      transform-style: preserve-3d;
+      perspective: 1200px;
+      cursor: none;
+    }
+
+    .grid div:hover {
+      transform: translateY(-40px) rotateX(8deg) rotateY(8deg) scale(1.05);
+      border-color: var(--primary);
+      box-shadow: 0 80px 180px rgba(255,140,102,0.6);
+    }
+
+    /* Offer */
+    .offer {
+      background: linear-gradient(135deg, var(--primary) 0%, #ff6b4d 100%);
+      color: white;
+      text-align: center;
+      padding: 200px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .offer h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 7rem;
+      margin-bottom: 80px;
+    }
+
+    .urgency {
+      font-size: 4rem;
+      font-weight: 900;
+      margin: 80px 0;
+      animation: pulse 2s infinite;
+    }
+
+    .big-primary {
+      font-size: 2.8rem;
+      padding: 48px 120px;
+    }
+
+    /* Footer CTA */
+    .footer-cta {
+      text-align: center;
+      padding: 180px 40px;
+      background: rgba(255,250,245,0.8);
+      backdrop-filter: blur(50px);
+    }
+
+    .footer-cta p {
+      font-size: 4rem;
+      font-weight: 900;
+      margin-bottom: 64px;
+    }
+
+    @media (max-width: 768px) {
+      .hero { padding: 180px 40px 140px; }
+      h1 { font-size: 8rem; }
+      .subtitle { font-size: 3.5rem; }
+      .cta-buttons { flex-direction: column; gap: 40px; }
+      button { padding: 24px 72px; font-size: 1.6rem; }
+      .pain-points h2, .features h2, .offer h2 { font-size: 5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cursor"></div>
+
+  <div class="parallax-bg">
+    <div class="wave"></div>
+    <div class="wave wave2"></div>
+    <div class="wave wave3"></div>
+  </div>
+
+  <nav>
+    <h1>Wavywarm</h1>
+  </nav>
+
+  <section class="hero">
+    <h1 class="animate">Wavywarm</h1>
+    <p class="subtitle animate">Онлайн-запись на всё бьюти в Ковентри</p>
+    <p class="big-text animate">Барбер → массаж → ногти → волосы → брови → воск → ресницы<br>Всё в одном месте. Без звонков. Без очередей. Без пиздеца.</p>
+
+    <div class="cta-buttons animate">
+      <button class="primary">Хочу тестовый доступ (бесплатно 30 дней)</button>
+      <button class="secondary">Уже мастер? Зарегистрироваться</button>
+    </div>
+
+    <div class="trust-badges animate">
+      <span>5 первых мест уже разбирают</span>
+      <span>Только Ковентри</span>
+      <span>Реал-тайм календарь</span>
+    </div>
+  </section>
+
+  <section class="pain-points">
+    <h2 class="animate">Устал от этого дерьма?</h2>
+    <ul class="animate">
+      <li>Телефон разрывается от звонков «а во сколько свободно?»</li>
+      <li>Google Calendar выглядит как после взрыва</li>
+      <li>Клиенты приходят в одно время, потому что «забыли»</li>
+      <li>Мастер в отпуске, а запись висит</li>
+      <li>Ты тратишь 3 часа в день на ручную хуйню</li>
+    </ul>
+    <p class="after animate">Wavywarm решает всё это за тебя.</p>
+  </section>
+
+  <section class="features">
+    <h2 class="animate">Что ты получишь сразу</h2>
+    <div class="grid container">
+      <div class="animate">Мгновенная запись 24/7</div>
+      <div class="animate">Красивый клиентский календарь</div>
+      <div class="animate">Авто-напоминания в WhatsApp</div>
+      <div class="animate">Управление мастерами и услугами</div>
+      <div class="animate">Отмена/перенос без твоего участия</div>
+      <div class="animate">Статистика — кто сколько заработал</div>
+      <div class="animate">Простая админка, без программистов</div>
+      <div class="animate">Мобильное приложение для клиентов (скоро)</div>
+    </div>
+  </section>
+
+  <section class="offer">
+    <div class="container">
+      <h2 class="animate">Тестовый запуск — только 5 мест</h2>
+      <p class="animate">Первые 5 салонов/мастеров получают:</p>
+      <ul class="animate">
+        <li>Полный доступ на 30 дней — 0₤</li>
+        <li>Персональная настройка под тебя</li>
+        <li>Приоритет в фичах на год вперёд</li>
+        <li>После теста — скидка 50% на первые 3 месяца</li>
+      </ul>
+      <p class="urgency animate">Места тают быстрее, чем воск на горячей кушетке.</p>
+      <button class="big-primary animate">Забрать тестовое место (осталось 4/5)</button>
+    </div>
+  </section>
+
+  <section class="footer-cta">
+    <div class="container">
+      <p class="animate">Не жди, пока конкуренты заберут всё.</p>
+      <button class="primary animate">Хочу быть одним из первых</button>
+      <small style="display:block; margin-top:120px; color:#6b5b5b;" class="animate">© 2026 Wavywarm — Ковентри бронирует по-новому</small>
+    </div>
+  </section>
+
+  <script>
+    // Курсор-волна
+    const cursor = document.querySelector('.cursor');
+    document.addEventListener('mousemove', e => {
+      cursor.style.left = e.clientX + 'px';
+      cursor.style.top = e.clientY + 'px';
+    });
+
+    document.addEventListener('mouseover', e => {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+        cursor.classList.add('grow');
+      } else {
+        cursor.classList.remove('grow');
+      }
+    });
+
+    // Ripple при клике
+    document.addEventListener('click', e => {
+      if (e.target.tagName === 'BUTTON') {
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple';
+        ripple.style.left = e.offsetX + 'px';
+        ripple.style.top = e.offsetY + 'px';
+        e.target.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+      }
+    });
+
+    // Добавляем ripple-стиль
+    const style = document.createElement('style');
+    style.innerHTML = `
+      button { position: relative; overflow: hidden; }
+      .ripple {
+        position: absolute;
+        width: 0;
+        height: 0;
+        background: rgba(255,255,255,0.4);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        animation: ripple-effect 0.6s ease-out;
+        pointer-events: none;
+      }
+      @keyframes ripple-effect {
+        to { width: 600px; height: 600px; opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>

@@ -231,3 +231,13 @@ input:checked + .slider:before {
   .tabs { flex-wrap: wrap; gap:8px; }
   .tabs .btn { padding:10px 20px; font-size:0.95rem; }
 }
+
+.block-controls { background: var(--card); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); }
+.block-controls .btn.active { background: var(--accent-hover) !important; transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+.highlight-block-range { 
+  background: rgba(255,82,82,0.4) !important; 
+  border: 3px dashed #ff5252 !important; 
+  animation: pulse 1s infinite; 
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+#block-calendar div:hover { transform: scale(1.05); transition:0.2s; }

@@ -96,6 +96,13 @@
 
   <!-- КАЛЕНДАРЬ БЛОКИРОВКИ -->
   <div class="card">
+    <div class="block-controls" style="display: flex; gap: 12px; margin: 24px 0; justify-content: center; flex-wrap: wrap; align-items: center;">
+  <button id="block-mode-day" class="btn">День</button>
+  <button id="block-mode-week" class="btn">Неделя</button>
+  <button id="block-mode-month" class="btn">Месяц</button>
+  <span id="block-preview" style="font-size:1.1rem; color:#e74c3c; font-weight:600; min-width:160px;">—</span>
+  <button id="block-mode-cancel" class="btn btn-danger" style="display:none;">Отменить</button>
+</div>
     <h2>Блокировка времени</h2>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
       <button class="btn" id="prevMonthBlock">← Предыдущий</button>

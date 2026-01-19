@@ -25,7 +25,7 @@ window.mastersList = [];
 let bookingsData = [];
 
 const SUPER_ADMIN_EMAILS = [
-  "prointernat07@gmail.com",
+  "prointeres07@gmail.com",
   "admin@vasiliki.ru"
 ];
 
@@ -987,6 +987,14 @@ auth.onAuthStateChanged(() => {
 
   setupInterface();
 
+if (!isSuperAdmin) {
+  const horizonCard = document.getElementById('booking-horizon-card');
+  if (horizonCard) {
+    horizonCard.style.display = 'none';  // Прячем блок нахуй
+    console.log('%cГоризонт записи спрятан для мастера, чтоб не ебал мозги', 'color: red; font-size: 18px;');  // Шуточный лог для дебага
+  }
+}
+
   onSnapshot(collection(db, "services"), s => {
     window.servicesList = s.docs.map(d => ({id: d.id, ...d.data()}));
     if (isSuperAdmin) renderServices();
@@ -1004,6 +1012,7 @@ auth.onAuthStateChanged(() => {
   });
 
   renderCalendar();
+  
 
   console.log("%cАДМИНКА 2026 — КАЛЕНДАРЬ ВЕРНУЛСЯ, ТОАСТЫ ЧИСТЫЕ, ВСЁ РАБОТАЕТ", "color:gold;background:black;font-size:36px;padding:20px");
 });

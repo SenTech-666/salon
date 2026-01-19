@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход • Wavywarm / Василики</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --card: #ffffff;
+      --text: #3c2f2f;
+      --text-light: #6b5b5b;
+      --accent: #c9a08a;
+      --accent-hover: #b38a72;
+      --border: #e8e2db;
+      --shadow: 0 12px 40px rgba(0,0,0,0.08);
+      --shadow-hover: 0 20px 60px rgba(0,0,0,0.12);
+      --radius: 32px;
+      --error: #ff5252;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:'Inter',sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    .login-box {
+      background:var(--card);
+      padding:3.5rem 2.5rem;
+      border-radius:var(--radius);
+      box-shadow:var(--shadow-hover);
+      width:100%;
+      max-width:480px;
+      text-align:center;
+    }
+    h1 {
+      font-family:'Playfair Display',serif;
+      color:var(--accent);
+      font-size:2.8rem;
+      margin-bottom:1.5rem;
+    }
+    p.subtitle {
+      color:var(--text-light);
+      margin-bottom:2rem;
+      font-size:1.1rem;
+    }
+    input {
+      width:100%;
+      padding:1.1rem;
+      margin:0.9rem 0;
+      border:2px solid var(--border);
+      border-radius:16px;
+      font-size:1.1rem;
+      background:#fdfaf7;
+    }
+    input:focus { border-color:var(--accent); outline:none; }
+    button {
+      width:100%;
+      padding:1.3rem;
+      background:var(--accent);
+      color:white;
+      border:none;
+      border-radius:999px;
+      font-size:1.2rem;
+      font-weight:600;
+      cursor:pointer;
+      margin-top:1.5rem;
+      transition:all 0.3s;
+    }
+    button:hover { background:var(--accent-hover); transform:translateY(-3px); }
+    button:disabled { opacity:0.6; cursor:not-allowed; }
+    .error-msg { color:var(--error); min-height:1.5rem; margin-top:1rem; font-weight:500; }
+    .loader {
+      display:inline-block;
+      width:1.3rem;
+      height:1.3rem;
+      border:3px solid white;
+      border-top-color:transparent;
+      border-radius:50%;
+      animation:spin 1s linear infinite;
+      margin-right:0.7rem;
+      vertical-align:middle;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="login-box">
+  <h1>Вход в систему</h1>
+  <p class="subtitle">Админ или мастер — не важно, заходи</p>
+
+  <input type="email" id="email" placeholder="Email" autocomplete="username" autofocus>
+  <input type="password" id="password" placeholder="Пароль" autocomplete="current-password">
+
+  <button id="loginBtn">Войти, сука</button>
+  <div id="errorMsg" class="error-msg"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCr08aVXswvpjwwLvtSbpBnPhE8dv3HWdM",
+    authDomain: "calendar-666-5744f.firebaseapp.com",
+    projectId: "calendar-666-5744f",
+    storageBucket: "calendar-666-5744f.appspot.com",
+    messagingSenderId: "665606748855",
+    appId: "1:665606748855:web:5e4a2865b1f26494cf2b32"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Список супер-админов (добавляй сюда свои почты)
+  const SUPER_ADMINS = [
+    "prointeres07@gmail.com",
+    "admin@vasiliki.ru",
+    // добавь сюда свою почту, если нужно
+  ];
+
+  document.getElementById('loginBtn').onclick = async () => {
+    const email = document.getElementById('email').value.trim();
+    const pass = document.getElementById('password').value;
+    const err = document.getElementById('errorMsg');
+    const btn = document.getElementById('loginBtn');
+
+    if (!email || !pass) {
+      err.textContent = "Бери и заполняй оба поля, ленивый хуй";
+      return;
+    }
+
+    err.textContent = "";
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loader"></span> Проверяю тебя...';
+
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, email, pass);
+      const user = userCred.user;
+
+      // 1. Проверяем, мастер ли ты
+      const masterRef = doc(db, "masters", user.uid);
+      const masterSnap = await getDoc(masterRef);
+
+      if (masterSnap.exists()) {
+        const masterData = masterSnap.data();
+        if (masterData.active !== false) {
+          localStorage.setItem("masterAuth", JSON.stringify({ id: user.uid, ...masterData }));
+          location.href = "admin.html"; // или "master-dashboard.html", если хочешь отдельный кабинет
+          return;
+        } else {
+          throw new Error("Твой аккаунт мастера отключён, пиздец");
+        }
+      }
+
+      // 2. Не мастер → проверяем супер-админа
+      if (SUPER_ADMINS.includes(email.toLowerCase())) {
+        localStorage.setItem("superAdminAuth", "true");
+        location.href = "admin.html";
+        return;
+      }
+
+      // 3. Ни то, ни другое
+      throw new Error("Ты кто такой вообще? Доступа нет, вали отсюда");
+
+    } catch (e) {
+      let msg = "Какая-то хуйня случилась";
+
+      if (e.code?.includes("wrong-password") || e.code?.includes("user-not-found")) {
+        msg = "Неправильный email или пароль, попробуй ещё раз, долбоёб";
+      } else if (e.message) {
+        msg = e.message;
+      }
+
+      err.textContent = msg;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Войти, сука";
+    }
+  };
+
+  // Enter → войти
+  document.getElementById('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      document.getElementById('loginBtn').click();
+    }
+  });
+</script>
+
+</body>
+</html>

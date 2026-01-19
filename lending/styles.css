@@ -1,0 +1,233 @@
+/* Wavywarm Landing Styles 2026 — тёплый, уютный, но дерзкий */
+
+:root {
+  --primary: #ff8c66;        /* персиково-оранжевый, тёплый как воск */
+  --primary-dark: #e66d4d;
+  --bg: #fffaf5;             /* кремовый фон, уютный */
+  --text: #2d1e12;           /* тёмно-коричневый текст */
+  --accent: #4a2c1a;         /* кофе/шоколад для заголовков */
+  --shadow: 0 12px 40px rgba(255, 140, 102, 0.18);
+  --radius: 24px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* Hero */
+.hero {
+  text-align: center;
+  padding: 120px 20px 80px;
+  background: linear-gradient(135deg, #fffaf5 0%, #ffe8d9 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 20%, rgba(255,140,102,0.15) 0%, transparent 50%);
+  animation: wave 12s infinite linear;
+}
+
+@keyframes wave {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  100% { transform: translate(20%, 10%) rotate(360deg); }
+}
+
+h1 {
+  font-size: 5.5rem;
+  font-weight: 900;
+  color: var(--primary);
+  margin-bottom: 16px;
+  letter-spacing: -2px;
+}
+
+.subtitle {
+  font-size: 2rem;
+  color: var(--accent);
+  margin-bottom: 24px;
+}
+
+.big-text {
+  font-size: 1.5rem;
+  max-width: 720px;
+  margin: 0 auto 48px;
+  color: #4a2c1a;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 48px;
+}
+
+button.primary, button.big-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 18px 48px;
+  border-radius: var(--radius);
+  font-size: 1.3rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: var(--shadow);
+}
+
+button.primary:hover, button.big-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(255,140,102,0.4);
+}
+
+button.secondary {
+  background: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  padding: 16px 44px;
+  border-radius: var(--radius);
+  font-size: 1.3rem;
+  transition: all 0.3s;
+}
+
+button.secondary:hover {
+  background: var(--primary);
+  color: white;
+}
+
+/* Trust badges */
+.trust-badges {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  flex-wrap: wrap;
+  font-size: 1.1rem;
+  color: #6b5b5b;
+}
+
+/* Pain points */
+.pain-points {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.pain-points h2 {
+  font-size: 3.2rem;
+  color: var(--accent);
+  margin-bottom: 40px;
+}
+
+.pain-points ul {
+  list-style: none;
+  font-size: 1.4rem;
+  max-width: 720px;
+  margin: 0 auto 32px;
+}
+
+.pain-points li {
+  margin-bottom: 16px;
+  color: #4a2c1a;
+}
+
+.after {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Features */
+.features {
+  background: white;
+  padding: 100px 20px;
+  text-align: center;
+}
+
+.features h2 {
+  font-size: 3.5rem;
+  margin-bottom: 60px;
+  color: var(--accent);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.grid div {
+  background: #fffaf5;
+  padding: 32px;
+  border-radius: var(--radius);
+  font-size: 1.3rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s;
+}
+
+.grid div:hover {
+  transform: translateY(-12px);
+}
+
+/* Остальные секции — аналогично, с теми же цветами и радиусами */
+
+.offer {
+  background: linear-gradient(135deg, var(--primary) 0%, #ff6b4d 100%);
+  color: white;
+  text-align: center;
+  padding: 100px 20px;
+  border-radius: 0;
+}
+
+.offer h2 {
+  font-size: 3.8rem;
+  margin-bottom: 32px;
+}
+
+.offer .urgency {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 32px 0;
+}
+
+.big-primary {
+  font-size: 1.6rem;
+  padding: 24px 64px;
+}
+
+/* Footer CTA */
+.footer-cta {
+  text-align: center;
+  padding: 80px 20px;
+  background: var(--bg);
+}
+
+.footer-cta button {
+  margin-top: 24px;
+}
+
+/* Медиа-запросы для мобилки */
+@media (max-width: 768px) {
+  h1 { font-size: 4rem; }
+  .subtitle { font-size: 1.6rem; }
+  .big-text { font-size: 1.3rem; }
+  .cta-buttons { flex-direction: column; gap: 16px; }
+}
