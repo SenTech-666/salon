@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Кастомизация главной страницы</title>
+  <link rel="stylesheet" href="admin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div style="position:fixed;top:24px;right:24px;z-index:1000;">
+  <button class="btn btn-danger" onclick="location.href='admin.html'">Вернуться в админку</button>
+</div>
+
+<div class="container">
+  <header class="text-center mb-40">
+    <h1>Кастомизация главной страницы</h1>
+    <p style="font-size:1.4rem;color:var(--text-light);">Измените тексты и название салона</p>
+  </header>
+
+  <div class="card">
+    <h2>Основные тексты</h2>
+    <div style="display:grid;gap:24px;">
+      <div>
+        <label>Название салона (Василики)</label>
+        <input id="salon-name" class="input" placeholder="Василики">
+      </div>
+      <div>
+        <label>Описание в герое (Маникюр в Москве)</label>
+        <textarea id="hero-description" class="input" rows="3"></textarea>
+      </div>
+      <div>
+        <label>Текст в блоке услуг</label>
+        <textarea id="services-text" class="input" rows="4"></textarea>
+      </div>
+      <div>
+        <label>Текст в блоке преимуществ</label>
+        <textarea id="advantages-text" class="input" rows="4"></textarea>
+      </div>
+      <div>
+        <label>Текст в блоке контактов</label>
+        <textarea id="contacts-text" class="input" rows="4"></textarea>
+      </div>
+      <!-- Добавьте другие поля по блокам index.html -->
+    </div>
+   <button class="btn" style="margin-top:32px;" id="save-custom-btn">
+  Сохранить изменения
+</button>
+  </div>
+</div>
+
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="admin-toast.js"></script>
+<script type="module" src="custom.js"></script>
+
+</body>
+</html>

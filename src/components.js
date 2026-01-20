@@ -18,6 +18,11 @@ window.selectedGlobalMasterId = localStorage.getItem('selectedMasterId') || null
 let currentModalDate = null;
 let currentOwnBookingId = null;
 
+// NEW: Переменные для режима переноса записи
+let isTransferMode = false;
+let transferBookingData = null; // { id, clientName, clientPhone, serviceId, serviceName, duration, price, oldDate, oldTime, masterId }
+
+
 // Обновление идентификатора клиента при успешной анонимной аутентификации
 onAuthStateChanged(auth, (user) => {
   if (user && user.isAnonymous) {
@@ -89,8 +94,7 @@ function updateGlobalMasterSelect() {
   // Если нет ни одного активного мастера — полностью скрываем блок выбора
   if (!hasActiveMasters) {
     if (container) container.style.display = "none";
-    select.style.display = "none";
-
+    
     window.selectedGlobalMasterId = null;
     localStorage.removeItem('selectedMasterId');
 
@@ -213,6 +217,12 @@ window.showBookingModal = (dateISO) => {
 
   currentModalDate = dateISO;
 
+  // Если это режим переноса — сразу открываем укороченную модалку
+  if (isTransferMode) {
+    openTransferModal(dateISO);
+    return;
+  }
+
   // Проверяем, есть ли у клиента активная запись на эту дату
   const ownBooking = store.bookings.find(b => 
     b.date === dateISO && 
@@ -226,6 +236,110 @@ window.showBookingModal = (dateISO) => {
   } else {
     currentOwnBookingId = null;
     openClientModal(dateISO);
+  }
+};
+
+/**
+ * Модалка для переноса — только выбор времени
+ */
+function openTransferModal(dateISO) {
+  if (!transferBookingData) {
+    toast("Ошибка: данные переноса потерялись, пиздец", "error");
+    isTransferMode = false;
+    return;
+  }
+
+  const service = store.services.find(s => s.id === transferBookingData.serviceId) || { name: "—", duration: 60 };
+
+  showModal(`
+    <div style="padding:32px 24px;max-width:480px;background:var(--card);border-radius:32px;box-shadow:var(--shadow-hover);">
+      <h3 style="text-align:center;font-size:2.2rem;margin-bottom:16px;color:var(--accent);font-family:'Playfair Display',serif;">
+        Перенос записи
+      </h3>
+      <div style="background:#f9f5f3;padding:20px;border-radius:16px;margin-bottom:24px;text-align:center;">
+        <p><strong>Клиент:</strong> ${transferBookingData.clientName}</p>
+        <p><strong>Старая дата/время:</strong> ${new Date(transferBookingData.oldDate).toLocaleDateString("ru-RU")} ${transferBookingData.oldTime}</p>
+        <p><strong>Услуга:</strong> ${transferBookingData.serviceName} (${transferBookingData.duration} мин)</p>
+      </div>
+      
+      <p style="text-align:center;margin-bottom:20px;font-size:1.2rem;">Выберите новое время</p>
+      
+      <div class="time-grid-old" id="timeGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px;"></div>
+
+      <div id="selectedTimeInfo" style="display:none;margin:28px 0 16px;font-size:1.3rem;color:var(--accent);text-align:center;">
+        Новое время: <strong id="chosenTime"></strong>
+      </div>
+
+      <div id="finalStep" style="display:none;margin-top:32px;text-align:center;">
+        <button onclick="confirmTransfer()" style="padding:18px 48px;background:var(--accent);color:white;border:none;border-radius:24px;font-size:1.4rem;font-weight:700;cursor:pointer;">
+          Перенести
+        </button>
+      </div>
+
+      <div id="instantSuccess" style="display:none;text-align:center;padding:50px 0;">
+        <h3 style="color:var(--accent);font-size:2rem;">Готово!</h3>
+        <p style="font-size:1.4rem;margin-top:16px;" id="successDetails"></p>
+      </div>
+    </div>
+  `);
+
+  renderTimeSlotsInModal(dateISO);
+}
+
+/**
+ * Подтверждение переноса
+ */
+window.confirmTransfer = async () => {
+  if (!transferBookingData || !window.selectedTimeForBooking) {
+    toast("Выбери время, долбоёб", "error");
+    return;
+  }
+
+  const service = store.services.find(s => s.id === transferBookingData.serviceId);
+  if (!service) {
+    toast("Услуга не найдена, пиздец", "error");
+    return;
+  }
+
+  if (window.isTimeOverlappingGlobal && window.isTimeOverlappingGlobal(currentModalDate, window.selectedTimeForBooking, service.duration)) {
+    toast("Это время уже занято, выбирай другое", "error");
+    return;
+  }
+
+  try {
+    await updateDoc(doc(db, "bookings", transferBookingData.id), {
+      date: currentModalDate,
+      time: window.selectedTimeForBooking,
+      // можно добавить updatedAt: new Date().toISOString()
+    });
+
+    // Уведомление в телеграм
+    await sendTelegramNotification({
+      ...transferBookingData,
+      date: currentModalDate,
+      time: window.selectedTimeForBooking,
+      action: "ПЕРЕНОС КЛИЕНТОМ"
+    });
+
+    toast.success("Запись перенесена, красавчик!");
+    
+    document.getElementById("finalStep")?.style?.setProperty("display", "none");
+    document.getElementById("instantSuccess")?.style?.setProperty("display", "block");
+    document.getElementById("successDetails").innerHTML = 
+      `Новая дата: ${new Date(currentModalDate).toLocaleDateString("ru-RU", {day:"numeric", month:"long"})}<br>время: <strong>${window.selectedTimeForBooking}</strong>`;
+
+    // Сбрасываем режим переноса
+    isTransferMode = false;
+    transferBookingData = null;
+
+    setTimeout(closeModal, 4000);
+
+    if (typeof window.renderCalendar === 'function') {
+      window.renderCalendar();
+    }
+  } catch (err) {
+    toast.error("Не удалось перенести: " + err.message);
+    console.error("Ошибка переноса:", err);
   }
 };
 
@@ -262,6 +376,35 @@ function showOwnBookingModal(booking) {
 }
 
 /**
+ * Запускает процесс переноса существующей записи
+ * @param {string} bookingId 
+ */
+window.startTransferOwnBooking = (bookingId) => {
+  const booking = store.bookings.find(b => b.id === bookingId);
+  if (!booking) {
+    toast("Запись не найдена, хуйня какая-то", "error");
+    return;
+  }
+
+  isTransferMode = true;
+  transferBookingData = {
+    id: booking.id,
+    clientName: booking.clientName,
+    clientPhone: booking.clientPhone,
+    serviceId: booking.serviceId,
+    serviceName: booking.serviceName || "—",
+    duration: booking.duration || 60,
+    price: booking.price || 0,
+    oldDate: booking.date,
+    oldTime: booking.time,
+    masterId: booking.masterId || null
+  };
+
+  closeModal();
+  toast.info("Выбери новую дату на календаре, потом время — и всё, перенесём");
+};
+
+/**
  * Отмена существующей записи клиента
  * @param {string} bookingId Идентификатор записи
  */
@@ -285,76 +428,12 @@ window.cancelOwnBooking = async (bookingId) => {
 };
 
 /**
- * Запускает процесс переноса существующей записи
- */
-window.startTransferOwnBooking = () => {
-  closeModal();
-  setTimeout(() => {
-    window.showBookingModal(currentModalDate);
-    toast("Выберите новое время для переноса", "info");
-  }, 400);
-};
-
-/**
- * Выполняет перенос существующей записи на новое время (если нужно)
- * @returns {Promise<boolean>} true — если перенос выполнен успешно
- */
-window.transferBookingIfNeeded = async () => {
-  if (!currentOwnBookingId) return false;
-
-  const oldBooking = store.bookings.find(b => b.id === currentOwnBookingId);
-  if (!oldBooking) return false;
-
-  const newTime = window.selectedTimeForBooking;
-  const serviceId = document.getElementById("service")?.value;
-  const service = store.services.find(s => s.id === serviceId);
-
-  if (!service || !newTime || 
-      (window.isTimeOverlappingGlobal && window.isTimeOverlappingGlobal(currentModalDate, newTime, service.duration))) {
-    toast("Выбранное время занято или услуга не указана", "error");
-    return false;
-  }
-
-  try {
-    await updateDoc(doc(db, "bookings", currentOwnBookingId), {
-      time: newTime,
-      serviceId: service.id,
-      serviceName: service.name,
-      duration: service.duration,
-      price: service.price || 0
-    });
-
-    await sendTelegramNotification({ ...oldBooking, newTime, action: "ПЕРЕНОС КЛИЕНТОМ" });
-
-    store.bookings = store.bookings.map(b => 
-      b.id === currentOwnBookingId 
-        ? { ...b, time: newTime, serviceId: service.id, serviceName: service.name, duration: service.duration, price: service.price || 0 }
-        : b
-    );
-
-    toast("Запись успешно перенесена", "success");
-    currentOwnBookingId = null;
-    return true;
-  } catch (err) {
-    toast("Ошибка при переносе записи", "error");
-    console.error("Ошибка переноса:", err);
-    return false;
-  }
-};
-
-/**
- * Создаёт новую запись или выполняет перенос существующей
+ * Создаёт новую запись (обычный режим, без переноса)
  */
 window.bookAppointment = async () => {
-  if (currentOwnBookingId) {
-    const success = await window.transferBookingIfNeeded();
-    if (success) {
-      document.getElementById("finalStep")?.style?.setProperty("display", "none");
-      document.getElementById("instantSuccess")?.style?.setProperty("display", "block");
-      document.getElementById("successDetails").innerHTML = 
-        `Запись перенесена!<br>${new Date(currentModalDate).toLocaleDateString("ru-RU", {day:"numeric", month:"long"})} в <strong>${window.selectedTimeForBooking}</strong>`;
-      setTimeout(closeModal, 4000);
-    }
+  // Если вдруг режим переноса всё ещё активен — не должны сюда попадать, но на всякий
+  if (isTransferMode) {
+    await confirmTransfer();
     return;
   }
 
@@ -418,7 +497,7 @@ window.bookAppointment = async () => {
 };
 
 /**
- * Открывает модальное окно для создания новой записи
+ * Открывает модальное окно для создания новой записи (обычный режим)
  * @param {string} dateStr Дата в формате YYYY-MM-DD
  */
 const openClientModal = (dateStr) => {
@@ -455,7 +534,7 @@ const openClientModal = (dateStr) => {
       </div>
 
       <div id="instantSuccess" style="display:none;text-align:center;padding:50px 0;">
-       
+        <h3 style="color:var(--accent);font-size:2rem;">Записались!</h3>
         <p style="font-size:1.6rem;color:var(--accent);line-height:1.6" id="successDetails"></p>
       </div>
     </div>
@@ -543,9 +622,13 @@ const timeToMinutes = (time) => {
 window.selectTime = (time, el) => {
   const serviceSelect = document.getElementById("service");
   let duration = 60;
+
+  // В режиме переноса serviceSelect может отсутствовать
   if (serviceSelect?.value) {
     const service = store.services.find(s => s.id === serviceSelect.value);
     duration = service?.duration || 60;
+  } else if (isTransferMode && transferBookingData) {
+    duration = transferBookingData.duration || 60;
   }
 
   if (window.isTimeOverlappingGlobal && window.isTimeOverlappingGlobal(currentModalDate, time, duration)) {
@@ -564,15 +647,25 @@ window.selectTime = (time, el) => {
   const finalStep = document.getElementById('finalStep');
 
   if (selectedInfo) selectedInfo.style.display = 'block';
-  if (nameInput) nameInput.style.display = 'block';
-  if (phoneInput) phoneInput.style.display = 'block';
-  if (serviceEl) serviceEl.style.display = 'block';
+  
+  // В режиме переноса скрываем лишние поля
+  if (!isTransferMode) {
+    if (nameInput) nameInput.style.display = 'block';
+    if (phoneInput) phoneInput.style.display = 'block';
+    if (serviceEl) serviceEl.style.display = 'block';
+  }
+
   if (finalStep) finalStep.style.display = 'block';
 
   const chosenTimeEl = document.getElementById('chosenTime');
-  if (chosenTimeEl) chosenTimeEl.textContent = `${time} (${duration} мин)`;
+  if (chosenTimeEl) {
+    chosenTimeEl.textContent = `${time} (${duration} мин)`;
+  }
 
-  nameInput?.focus();
+  // В обычном режиме фокус на имя, в переносе — сразу на кнопку
+  if (!isTransferMode) {
+    nameInput?.focus();
+  }
 };
 
 /**
@@ -589,5 +682,5 @@ function forceUpdateClientSelect() {
 // Экспорт основной функции
 export { updateGlobalMasterSelect };
 
-// Отладочное сообщение о успешной загрузке модуля (можно удалить в production)
-console.log("%cCOMPONENTS.JS — МОДУЛЬ ЗАГРУЖЕН И ГОТОВ К РАБОТЕ", "color: lime; background: black; font-size: 24px; font-weight: bold");
+// Отладочное сообщение о успешной загрузке модуля
+console.log("%cCOMPONENTS.JS — МОДУЛЬ ЗАГРУЖЕН С ПЕРЕНОСОМ ЗАПИСИ, БЛЯТЬ!", "color: lime; background: black; font-size: 24px; font-weight: bold");

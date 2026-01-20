@@ -22,87 +22,15 @@
     </div>
   </header>
 
-  <!-- УСЛУГИ -->
-  <div class="card" id="services-card">
-    <h2>Услуги</h2>
-    <button class="btn" onclick="openModal('service-modal')">+ Добавить услугу</button>
-    <div id="services-list" class="grid mt-20"></div>
-  </div>
-  <!-- Блок горизонта записи -->
-<div class="card" id="booking-horizon-card">
-  <h2>Горизонт записи</h2>
-  <p style="color: var(--text-light); margin-bottom: 24px;">
-    На сколько дней вперёд клиенты могут бронировать
-  </p>
-
-  <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-    <input type="number" id="maxBookingDaysAhead" class="input" 
-           min="7" max="365" step="1" placeholder="90" 
-           style="width: 140px;" />
-
-    <span style="font-size: 1.1rem;">дней вперёд</span>
-
-    <button class="btn" onclick="saveBookingHorizon()">Сохранить</button>
-  </div>
-
-  <div id="horizon-preview" style="margin-top: 16px; font-style: italic; color: var(--text-light);">
-    Сейчас открыта запись до: <span id="horizon-date">...</span>
-  </div>
-</div>
-  
-  <!-- МАСТЕРА -->
-  <div class="card" id="masters-card">
-    <h2>Мастера</h2>
-    <button class="btn" onclick="openMasterModal()">+ Добавить мастера</button>
-    <div id="masters-list" class="grid mt-20"></div>
-  </div>
-
-  <!-- ЗАПИСИ -->
- <!-- ЗАПИСИ -->
-<div class="card" id="bookings-card">
-  <h2>Записи</h2>
-  
-  <!-- Вкладки -->
-  <div class="tabs" style="display:flex;gap:12px;margin-bottom:20px;">
-    <button class="btn" onclick="switchTab('all')" id="tab-all">Все</button>
-    <button class="btn" onclick="switchTab('today')" id="tab-today">Сегодня</button>
-    <button class="btn" onclick="switchTab('month')" id="tab-month">Месяц</button>
-    <button class="btn" onclick="switchTab('history')" id="tab-history">История</button>
-  </div>
-
-  <!-- Фильтры -->
-  <div style="display:flex;gap:16px;align-items:flex-end;margin-bottom:24px;">
-    <form autocomplete="off" style="display:contents;"><input type="text" class="input" id="search" placeholder="Поиск по имени, телефону или услуге..." autocomplete="off" name="search-field-dont-autofill"></form>
-    <input type="date" class="input" id="filter-date" style="width:180px;">
-    <select class="input" id="filter-master" style="width:200px;">
-      <option value="">Все мастера</option>
-      <!-- Заполняется JS -->
-    </select>
-    <button class="btn" onclick="applyFilters()">Применить</button>
-    <button class="btn btn-warning" onclick="clearFilters()">Очистить</button>
-  </div>
-
-  <p style="color:var(--text-light);margin-bottom:16px;">
-    Всего записей: <span id="count">0</span>
-  </p>
-
-  <div id="bookings-list" class="grid mt-20"></div>
-
-  <div style="display:flex;gap:12px;margin-top:32px;">
-    <button class="btn btn-danger" id="delete-selected" disabled onclick="deleteSelectedBookings()">Удалить выбранные</button>
-    <button class="btn btn-warning" id="transfer-selected" disabled onclick="transferSelectedBookings()">Массовый перенос</button>
-  </div>
-</div>
-
-  <!-- КАЛЕНДАРЬ БЛОКИРОВКИ -->
+  <!-- 1. КАЛЕНДАРЬ БЛОКИРОВКИ -->
   <div class="card">
     <div class="block-controls" style="display: flex; gap: 12px; margin: 24px 0; justify-content: center; flex-wrap: wrap; align-items: center;">
-  <button id="block-mode-day" class="btn">День</button>
-  <button id="block-mode-week" class="btn">Неделя</button>
-  <button id="block-mode-month" class="btn">Месяц</button>
-  <span id="block-preview" style="font-size:1.1rem; color:#e74c3c; font-weight:600; min-width:160px;">—</span>
-  <button id="block-mode-cancel" class="btn btn-danger" style="display:none;">Отменить</button>
-</div>
+      <button id="block-mode-day" class="btn">День</button>
+      <button id="block-mode-week" class="btn">Неделя</button>
+      <button id="block-mode-month" class="btn">Месяц</button>
+      <span id="block-preview" style="font-size:1.1rem; color:#e74c3c; font-weight:600; min-width:160px;">—</span>
+      <button id="block-mode-cancel" class="btn btn-danger" style="display:none;">Отменить</button>
+    </div>
     <h2>Блокировка времени</h2>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
       <button class="btn" id="prevMonthBlock">← Предыдущий</button>
@@ -111,9 +39,83 @@
     </div>
     <div id="block-calendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;"></div>
   </div>
+
+  <!-- 2. ЗАПИСИ -->
+  <div class="card" id="bookings-card">
+    <h2>Записи</h2>
+    
+    <!-- Вкладки -->
+    <div class="tabs" style="display:flex;gap:12px;margin-bottom:20px;">
+      <button class="btn" onclick="switchTab('all')" id="tab-all">Все</button>
+      <button class="btn" onclick="switchTab('today')" id="tab-today">Сегодня</button>
+      <button class="btn" onclick="switchTab('month')" id="tab-month">Месяц</button>
+      <button class="btn" onclick="switchTab('history')" id="tab-history">История</button>
+    </div>
+
+    <!-- Фильтры -->
+    <div style="display:flex;gap:16px;align-items:flex-end;margin-bottom:24px;">
+      <form autocomplete="off" style="display:contents;">
+        <input type="text" class="input" id="search" placeholder="Поиск по имени, телефону или услуге..." autocomplete="off" name="search-field-dont-autofill">
+      </form>
+      <input type="date" class="input" id="filter-date" style="width:180px;">
+      <select class="input" id="filter-master" style="width:200px;">
+        <option value="">Все мастера</option>
+        <!-- Заполняется JS -->
+      </select>
+      <button class="btn" onclick="applyFilters()">Применить</button>
+      <button class="btn btn-warning" onclick="clearFilters()">Очистить</button>
+    </div>
+
+    <p style="color:var(--text-light);margin-bottom:16px;">
+      Всего записей: <span id="count">0</span>
+    </p>
+
+    <div id="bookings-list" class="grid mt-20"></div>
+
+    <div style="display:flex;gap:12px;margin-top:32px;">
+      <button class="btn btn-danger" id="delete-selected" disabled onclick="deleteSelectedBookings()">Удалить выбранные</button>
+      <button class="btn btn-warning" id="transfer-selected" disabled onclick="transferSelectedBookings()">Массовый перенос</button>
+    </div>
+  </div>
+
+  <!-- 3. УСЛУГИ -->
+  <div class="card" id="services-card">
+    <h2>Услуги</h2>
+    <button class="btn" onclick="openModal('service-modal')">+ Добавить услугу</button>
+    <div id="services-list" class="grid mt-20"></div>
+  </div>
+
+  <!-- 4. МАСТЕРА -->
+  <div class="card" id="masters-card">
+    <h2>Мастера</h2>
+    <button class="btn" onclick="openMasterModal()">+ Добавить мастера</button>
+    <div id="masters-list" class="grid mt-20"></div>
+  </div>
+
+  <!-- 5. ГОРИЗОНТ ЗАПИСИ -->
+  <div class="card" id="booking-horizon-card">
+    <h2>Горизонт записи</h2>
+    <p style="color: var(--text-light); margin-bottom: 24px;">
+      На сколько дней вперёд клиенты могут бронировать
+    </p>
+
+    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+      <input type="number" id="maxBookingDaysAhead" class="input" 
+             min="7" max="365" step="1" placeholder="90" 
+             style="width: 140px;" />
+
+      <span style="font-size: 1.1rem;">дней вперёд</span>
+
+      <button class="btn" onclick="saveBookingHorizon()">Сохранить</button>
+    </div>
+
+    <div id="horizon-preview" style="margin-top: 16px; font-style: italic; color: var(--text-light);">
+      Сейчас открыта запись до: <span id="horizon-date">...</span>
+    </div>
+  </div>
 </div>
 
-<!-- МОДАЛКИ -->
+<!-- МОДАЛКИ (остаются без изменений в конце) -->
 <div id="service-modal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeModal('service-modal')">×</span>
@@ -127,7 +129,6 @@
     <div style="display: flex; gap: 16px; margin-top: 24px;">
       <button class="btn" onclick="saveService()">Сохранить</button>
       
-      <!-- Кнопка удаления — показывается только при редактировании -->
       <button id="delete-service-btn" 
               class="btn btn-danger" 
               style="display:none;" 
@@ -151,7 +152,6 @@
     <div style="display: flex; gap: 16px; margin-top: 24px;">
       <button class="btn" onclick="saveMaster()">Сохранить</button>
       
-      <!-- Кнопка удаления — показываем только при редактировании -->
       <button id="delete-master-btn" 
               class="btn btn-danger" 
               style="display:none;" 
@@ -205,7 +205,9 @@
 </div>
 
 <script type="module" src="firebase-config.js"></script>
-<script type="module" src="./src/admin-toast.js"></script>
+<script type="module" src="admin-toast.js"></script>
+<script type="module" src="calendar.js"></script>
 <script type="module" src="admin.js"></script>
+
 </body>
 </html>

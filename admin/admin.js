@@ -11,10 +11,7 @@ import {
   writeBatch, serverTimestamp,setDoc
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-import {
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
 
 // Глобальные переменные
 let currentMaster = null;
@@ -32,48 +29,6 @@ const SUPER_ADMIN_EMAILS = [
 let selectedBookings = new Set(); // для массовых действий
 let currentTab = 'all'; // по умолчанию все записи
 
-// === ВСТРОЕННЫЙ ТОАСТ ДЛЯ АДМИНКИ — ЧТОБЫ НЕ ЕБАТЬСЯ С ИМПОРТАМИ ===
-const adminToast = (message, type = "info", duration = 4000) => {
-  const toastEl = document.createElement("div");
-  toastEl.textContent = message;
-  toastEl.style.position = "fixed";
-  toastEl.style.top = "24px";
-  toastEl.style.right = "24px";
-  toastEl.style.padding = "16px 24px";
-  toastEl.style.borderRadius = "12px";
-  toastEl.style.color = "white";
-  toastEl.style.fontWeight = "bold";
-  toastEl.style.fontSize = "1.1rem";
-  toastEl.style.zIndex = "99999";
-  toastEl.style.boxShadow = "0 8px 32px rgba(0,0,0,0.5)";
-  toastEl.style.opacity = "0";
-  toastEl.style.transform = "translateY(-30px)";
-  toastEl.style.transition = "all 0.4s ease";
-
-  if (type === "success") toastEl.style.background = "#00c853";
-  else if (type === "error") toastEl.style.background = "#ff5252";
-  else if (type === "warning") toastEl.style.background = "#ff9800";
-  else toastEl.style.background = "#2196f3";
-
-  document.body.appendChild(toastEl);
-
-  requestAnimationFrame(() => {
-    toastEl.style.opacity = "1";
-    toastEl.style.transform = "translateY(0)";
-  });
-
-  setTimeout(() => {
-    toastEl.style.opacity = "0";
-    toastEl.style.transform = "translateY(-30px)";
-    setTimeout(() => toastEl.remove(), 400);
-  }, duration);
-};
-
-// Шорткаты
-const toastSuccess = (msg) => adminToast(msg, "success");
-const toastError   = (msg) => adminToast(msg, "error");
-const toastWarning = (msg) => adminToast(msg, "warning");
-const toastInfo    = (msg) => adminToast(msg, "info");
 console.log("%cДЕБАГ АДМИНКИ 2026 — ПОЛНЫЙ КОМПЛЕКТ, СУКА!", "color:red;font-size:30px");
 console.log("window.isSuperAdmin =", window.isSuperAdmin);
 console.log("localStorage superAdminAuth =", localStorage.getItem("superAdminAuth"));
@@ -271,16 +226,15 @@ function renderBookings() {
   const dateFilter = document.getElementById("filter-date")?.value || '';
   const masterFilter = document.getElementById("filter-master")?.value || '';
 
-  let filtered = [...bookingsData]; // всегда работаем с копией, чтоб не ебать оригинал
+  let filtered = [...bookingsData];
 
-  // 1. Фильтр по мастеру (самый жёсткий, всегда первый)
+  // Фильтры (мастер / поиск / дата / вкладки) — без изменений
   if (masterFilter) {
     filtered = filtered.filter(b => b.masterId === masterFilter);
   } else if (currentMaster?.id) {
     filtered = filtered.filter(b => b.masterId === currentMaster.id);
   }
 
-  // 2. Поиск по имени/телефону/услуге
   if (search) {
     filtered = filtered.filter(b =>
       (b.clientName?.toLowerCase().includes(search) ||
@@ -289,78 +243,113 @@ function renderBookings() {
     );
   }
 
-  // 3. Теперь вкладки — применяем их ТОЛЬКО если НЕ выбран конкретный dateFilter
-  // (иначе dateFilter имеет приоритет — так логичнее для админа)
-  const todayStr = new Date().toISOString().slice(0, 10); // "2026-01-17"
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   if (!dateFilter) {
     if (currentTab === 'today') {
       filtered = filtered.filter(b => b.date === todayStr);
-      // adminToast.info("Только сегодня, господин!"); // если хочешь
     } 
     else if (currentTab === 'month') {
       const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
         .toISOString().slice(0, 10);
       const lastDay = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
         .toISOString().slice(0, 10);
-
       filtered = filtered.filter(b => b.date >= firstDay && b.date <= lastDay);
     } 
     else if (currentTab === 'history') {
-      // История = всё до сегодняшнего дня ВКЛЮЧИТЕЛЬНО (или убери <= todayStr, если хочешь только строго прошлое)
       filtered = filtered.filter(b => b.date <= todayStr);
     }
-    // 'all' — ничего не фильтруем по датам
   }
 
-  // 4. Конкретная дата из календаря — самый сильный фильтр, перебивает вкладки
   if (dateFilter) {
     filtered = filtered.filter(b => b.date === dateFilter);
   }
 
-  // Обновляем счётчик
-  document.getElementById("count").textContent = filtered.length;
-
-  // Сортируем от новых к старым (по дате + времени)
+  // Сортировка: новые сверху
   filtered.sort((a, b) => {
     const da = new Date(a.date + 'T' + (a.time || '00:00:00'));
     const db = new Date(b.date + 'T' + (b.time || '00:00:00'));
-    return db - da; // новые сверху
+    return db - da;
   });
 
-  // Рендер списка
-  const list = document.getElementById("bookings-list");
-  list.innerHTML = filtered.length === 0
-    ? `<p style="text-align:center;color:#aaa;padding:80px 20px;font-size:1.5rem;">
-         ${currentMaster ? 'Записей нет.<br>Отдыхай, король' : 'Нет записей, сука :('}
-       </p>`
-    : filtered.map(b => {
-        const service = window.servicesList.find(s => s.id === b.serviceId);
-        const masterName = b.masterId 
-          ? window.mastersList.find(m => m.id === b.masterId)?.name || 'Общий график' 
-          : 'Общий график';
+  const totalCount = filtered.length;
+  document.getElementById("count").textContent = totalCount;
 
-        return `
-          <div class="item" style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid #eee;cursor:pointer;">
-            <input type="checkbox" 
-                   onchange="toggleBookingSelection('${b.id}', this.checked)" 
-                   style="width:20px;height:20px;">
-            <div onclick="openBookingModal('${b.id}')" style="flex:1;">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <strong style="font-size:1.3rem;color:var(--accent);">${b.clientName || 'Анонимный пиздец'}</strong>
-                <span style="color:#777;font-size:0.95rem;">${b.date} • ${b.time}</span>
-              </div>
-              <div style="margin-top:6px;color:#555;">
-                ${b.clientPhone ? `<span style="color:#a67c52;">${b.clientPhone}</span> • ` : ''}
-                ${service?.name || '???'} (${service?.price || '?'}₽) • 
-                <span style="color:#777;">Мастер: ${masterName}</span>
-              </div>
-            </div>
-          </div>`;
-      }).join("");
+  const list = document.getElementById("bookings-list");
+
+  // Определяем, сколько показывать по умолчанию
+  const INITIAL_VISIBLE = 5;
+  const showAll = window.bookingsShowAll === true; // глобальный флаг состояния
+
+  const visibleItems = showAll ? filtered : filtered.slice(0, INITIAL_VISIBLE);
+  const hiddenCount = totalCount - visibleItems.length;
+
+  // Формируем HTML элементов записей
+  let itemsHtml = visibleItems.map(b => {
+    const service = window.servicesList.find(s => s.id === b.serviceId);
+    const masterName = b.masterId 
+      ? window.mastersList.find(m => m.id === b.masterId)?.name || 'Общий график' 
+      : 'Общий график';
+
+    return `
+      <div class="item" style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid #eee;cursor:pointer;">
+        <input type="checkbox" 
+               onchange="toggleBookingSelection('${b.id}', this.checked)" 
+               style="width:20px;height:20px;">
+        <div onclick="openBookingModal('${b.id}')" style="flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="font-size:1.3rem;color:var(--accent);">${b.clientName || 'Аноним'}</strong>
+            <span style="color:#777;font-size:0.95rem;">${b.date} • ${b.time}</span>
+          </div>
+          <div style="margin-top:6px;color:#555;">
+            ${b.clientPhone ? `<span style="color:#a67c52;">${b.clientPhone}</span> • ` : ''}
+            ${service?.name || '???'} (${service?.price || '?'}₽) • 
+            <span style="color:#777;">Мастер: ${masterName}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+
+  // Добавляем кнопку "Показать ещё" / "Свернуть", если нужно
+  let toggleButtonHtml = '';
+  if (totalCount > INITIAL_VISIBLE) {
+    if (showAll) {
+      toggleButtonHtml = `
+        <div style="text-align:center; margin-top:24px;">
+          <button class="btn btn-light" onclick="toggleShowAllBookings(false)">
+            Свернуть (показать только ${INITIAL_VISIBLE})
+          </button>
+        </div>`;
+    } else {
+      toggleButtonHtml = `
+        <div style="text-align:center; margin-top:24px;">
+          <button class="btn" onclick="toggleShowAllBookings(true)">
+            Показать все (${hiddenCount} ещё)
+          </button>
+        </div>`;
+    }
+  }
+
+  // Если записей вообще нет
+  if (totalCount === 0) {
+    list.innerHTML = `<p style="text-align:center;color:#aaa;padding:80px 20px;font-size:1.5rem;">
+      ${currentMaster ? 'Записей нет.<br>Отдыхай, король' : 'Нет записей, сука :('}
+    </p>`;
+  } else {
+    list.innerHTML = itemsHtml + toggleButtonHtml;
+  }
 
   updateMassActionButtons();
 }
+// Глобальный флаг и функция переключения показа всех записей
+window.bookingsShowAll = false;
+
+window.toggleShowAllBookings = (show) => {
+  window.bookingsShowAll = show;
+  renderBookings();
+  // Прокручиваем к верху списка (опционально)
+  document.getElementById("bookings-list").scrollIntoView({ behavior: "smooth", block: "start" });
+};
 function toggleBookingSelection(id, checked) {
   if (checked) {
     selectedBookings.add(id);
